@@ -1,0 +1,4 @@
+dimod~=0.10.6
+numpy~=1.19.4
+matplotlib~=3.4.3
+git+ssh://git@git.dwavesys.local:7999/~acondello/dwave-system.git@feature/LeapHybridCQMSampler
