@@ -106,7 +106,7 @@ minimize w
 Our first constraint, [equation 1](#eq2), enforces the precedence constraint.
 This ensures that all operations of a job are executed in the given order.
 
-![equation1](_static/eq1.png)          `(1)`
+![equation1](_static/eq1.png)          (1)
 
 This constraint ensures that for a give job `j` a task on a machine starts when
 previous task is finished. As an example for consecutive tasks 4 and 5 of 
@@ -116,10 +116,10 @@ tasks 4 takes 12 hours to finish we add this constraint:
 
 - #### No Overlap constraints
 [equation 2](#eq2) ensures that jobs don't use any machine at the same time. 
-![eq2](_static/eq2.png)          `(2)`
+![eq2](_static/eq2.png)          (2)
 
 Usually this constraint is modeled as two disjunctive linear constraint 
-[Ku et al. (2016)](#Manne), however, it is more efficient to model this as one
+([Ku et al. (2016)](#Ku) and [Manne et al. 1960](#Manne)), however, it is more efficient to model this as one
 single quadratic inequality constraint. 
 In addition, using quadratic equation eliminates the need for using the so called 
 `Big M` value to activate or relax constraint. 
@@ -158,7 +158,7 @@ The make span  of a JSS problem can be calculated by obtaining the maximum of
 completion time of the last task of all jobs. This can be obtaining using the 
 inequality constraints of [equation3](#eq3)
 
-![eq3](_static/eq3.png)          `(3)`
+![eq3](_static/eq3.png)          (3)
 
 ## References
 
