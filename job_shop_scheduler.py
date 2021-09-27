@@ -234,8 +234,8 @@ if __name__ == "__main__":
 
     # Finished solving the model now time it.
     solver_time = time() - current_time
-    # print results.
 
+    # Print results.
     print(" \n" + "=" * 52 + "SOLUTION RESULTS" + "=" * 52)
     print(tabulate([["Completion-Time(interval)", "Max-possible-make-span",
                      "model_building_time(s)", "solver-call-time(s)",
@@ -249,7 +249,6 @@ if __name__ == "__main__":
         jss_data, model.solution, model.completion_time, out_sol_file)
 
     # Plot solution
-
     job_start_time, processing_time = \
         job_plotter.prep_solution_for_plotting(jss_data, model.solution)
 

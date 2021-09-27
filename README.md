@@ -103,10 +103,10 @@ minimize w
 ### Constraints
 - #### Precedence Constraint:
 
-Our first constraint enforces the precedence constraint. This ensures that all
-operations of a job are executed in the given order.
+Our first constraint, [equation 1](#eq2), enforces the precedence constraint.
+This ensures that all operations of a job are executed in the given order.
 
-![equation1](_static/eq1.png)
+![equation1](_static/eq1.png)          `(1)`
 
 This constraint ensures that for a give job `j` a task on a machine starts when
 previous task is finished. As an example for consecutive tasks 4 and 5 of 
@@ -115,8 +115,8 @@ tasks 4 takes 12 hours to finish we add this constraint:
 `x_3_6 >= x_3_1 + 12`
 
 - #### No Overlap constraints
-This constraint ensures that jobs don't use any machine at the same time. 
-![](_static/eq2.png)
+[equation 2](#eq2) ensures that jobs don't use any machine at the same time. 
+![eq2](_static/eq2.png)          `(2)`
 
 Usually this constraint is modeled as two disjunctive linear constraint 
 [Ku et al. (2016)](#Manne), however, it is more efficient to model this as one
@@ -146,19 +146,21 @@ behaviour
 
 `x_3,5 - x_8,5 - 10 y_3,8,5 + 2 y_3,8,5 (x_8,5 - x_3,5) >= 2`
 
-if  `y_3,8,5 = 0` we have `x_3,5 - x_8,5  >= 2'
+Depending on the value of `y_3,8,5` one of these constraint ar enforced:
 
-if `y_3,8,5 =0` we have `x_8,5  - x_3,5 >= 12`
+   a) if  `y_3,8,5 = 0` we have `x_3,5 - x_8,5  >= 2` 
+
+   b) if `y_3,8,5 =0`  we have `x_8,5  - x_3,5 >= 12`
 
 
-## Make Span Constraint. 
+- #### Make Span Constraint. 
 The make span  of a JSS problem can be calculated by obtaining the maximum of 
 completion time of the last task of all jobs. This can be obtaining using the 
-inequality constraints of [equation 3](#eq3)
+inequality constraints of [equation3](#eq3)
 
-![eq3](_static/eq3.png)
+![eq3](_static/eq3.png)          `(3)`
 
-##References
+## References
 
 <a id="Manne"></a>
 A. S. Manne, On the job-shop scheduling problem, Operations Research , 1960, 
