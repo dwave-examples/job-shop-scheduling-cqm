@@ -5,6 +5,9 @@ from data import Data
 import matplotlib.pyplot as plt
 from dwave.system import LeapHybridCQMSampler
 from time import time
+from tabulate import tabulate
+from cqmsolver.hss_sampler import HSSCQMSampler
+
 try:
     from cqmsolver.hss_sampler import HSSCQMSampler
 except:
@@ -72,32 +75,6 @@ class JSSCQM():
                                         >= data.task_duration[(j, t - 1)],
                                         label='pj{}_m{}'.format(j, t))
 
-    def add_linear_one_job_only_cstr(self, data):
-        """Add linear constraints to ensure that no two jobs can be scheduled on
-        the same machine at the same time.
-        Args:
-            data: JSS data class
-
-        """
-
-        "Add disjunctive constraints for linear model"
-        for j in range(data.n):  # jobs
-            for k in range(data.n):  # jobs
-                if j < k:
-                    for i in range(data.m):
-                        task_k = data.machine_task[(k, i)]
-                        task_j = data.machine_task[(j, i)]
-                        self.model.add_constraint(
-                            self.x[(j, i)] - self.x[(k, i)] +
-                            data.MaxMakeSpan * self.y[(j, k, i)] >=
-                            data.task_duration[(k, task_k)],
-                            label='OneJob1j{}_j{}_m{}'.format(j, k, i))
-                        self.model.add_constraint(
-                            -self.x[(j, i)] + self.x[(k, i)]
-                            - data.MaxMakeSpan * self.y[(j, k, i)] >=
-                            data.task_duration[(j, task_j)] - data.MaxMakeSpan,
-                            label='OneJob2j{}_j{}_m{}'.format(j, k, i))
-
     def add_quadratic_one_job_only_cstr(self, data):
         """Add quadratic constraints to ensure that no two jobs can be scheduled
          on the same machine at the same time.
@@ -160,6 +137,7 @@ class JSSCQM():
                           raw_sampleset.vartype)
 
         self.best_feasible_sample = feasible_samples.first.sample
+        print(" \n" + "=" * 30 + "FEASIBLE SAMPLE SET" + "=" * 30)
         print(feasible_samples)
         self.solution = {
             (j, i): self.best_feasible_sample[self.x[(j, i)].variables[0]]
@@ -185,43 +163,41 @@ if __name__ == "__main__":
         description='Job Shop Scheduling Using'
                     ' D-Wave ConstraintQuadraticModel solver')
 
-    parser.add_argument('--input_file', type=str,
+    parser.add_argument('-instance', type=str,
                         help='path to to the input instance file',
-                        default='input/instance3_3.txt')
+                        default='input/instance5_5.txt')
 
-    parser.add_argument('--time_limit', type=int,
+    parser.add_argument('-tl', type=int,
                         help='Time limit in seconds')
 
-    parser.add_argument('--plot_jobs', action='store_false',
-                        help='Plot the Job Shop Solution')
-
-    parser.add_argument('--write_solution', action='store_false',
-                        help='Plot the Job Shop Solution')
-
-    parser.add_argument('--out_sol_file', type=str,
+    parser.add_argument('-os', type=str,
                         help='path to to the output solution file')
 
-    parser.add_argument('--out_plot_file', type=str,
+    parser.add_argument('-op', type=str,
                         help='path to to the output plot file')
 
     args = parser.parse_args()
-
-    input_file = args.input_file
-    plot_jobs = args.plot_jobs
-    write_solution = args.write_solution
-    time_limit = args.time_limit
-    out_sol_file = args.out_sol_file
-    out_plot_file = args.out_plot_file
-    print("\n  ============================= INPUT SETTINGS"
-          " ================================= ")
-
-    print("Input-instance \t\t\t Plot-schedule \t\t Time-limit")
-    print("-------------- \t\t\t ------------- \t\t ----------")
-    print("{:20s} \t \t {} \t\t\t   {} \n\n".format(
-        input_file.split(sep="/")[-1], plot_jobs, time_limit))
+    input_file = args.instance
+    time_limit = args.tl
 
     # Define JSS data class
-    jss_data = Data()
+    jss_data = Data(input_file)
+
+    # Set output plot and solution path if the are not provided by input args
+    if args.op is None:
+        out_plot_file = jss_data.instance_name + '.png'
+    else:
+        out_sol_out_plot_file = args.op
+
+    if args.os is None:
+        out_sol_file = jss_data.instance_name + '.sol'
+    else:
+        out_sol_file = args.os
+
+    print(" \n" + "=" * 25 + "INPUT SETTINGS" + "=" * 25)
+    print(tabulate([["Input-instance", "Time-limit"],
+                    [jss_data.instance_name, time_limit]],
+                   headers="firstrow"))
 
     # Read input data
     jss_data.read_input_data(filename=input_file)
@@ -259,21 +235,23 @@ if __name__ == "__main__":
     # Finished solving the model now time it.
     solver_time = time() - current_time
     # print results.
-    print("\n\n ==================================SOLUTION RESULTS============="
-          "===================")
-    print("Completion-Time(interval) \t Max-possible-make-span \t model_building_time(s) \t solver-call-time(s) \t Total-runtime(s)")
-    print("------------------------- \t ----------------------- \t ---------------------- \t ------------------- \t ---------------")
-    print("\t\t\t{} \t\t\t\t\t {} \t\t\t\t {:8.2f}  \t\t\t\t\t {:8.2f}  \t\t\t\t {:8.2f}".format(model.completion_time, jss_data.MaxMakeSpan, model_building_time, solver_time, time() - start_time))
+
+    print(" \n" + "=" * 52 + "SOLUTION RESULTS" + "=" * 52)
+    print(tabulate([["Completion-Time(interval)", "Max-possible-make-span",
+                     "model_building_time(s)", "solver-call-time(s)",
+                     "Total-runtime(s)"],
+                    [model.completion_time, jss_data.MaxMakeSpan,
+                     model_building_time, solver_time, time() - start_time]],
+                   headers="firstrow"))
 
     # Write solution to a file.
-    if write_solution:
-        write_solution_to_file(
-            jss_data, model.solution, model.completion_time, out_sol_file)
+    write_solution_to_file(
+        jss_data, model.solution, model.completion_time, out_sol_file)
 
     # Plot solution
-    if plot_jobs:
-        job_start_time, processing_time =\
-            job_plotter.prep_solution_for_plotting(jss_data, model.solution)
 
-        job_plotter.plotjssp(job_start_time, processing_time)
-        plt.show()
+    job_start_time, processing_time = \
+        job_plotter.prep_solution_for_plotting(jss_data, model.solution)
+
+    job_plotter.plotjssp(job_start_time, processing_time)
+    plt.savefig(out_plot_file)

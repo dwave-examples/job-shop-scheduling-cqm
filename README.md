@@ -2,13 +2,12 @@
 
 [Job shop scheduling](https://en.wikipedia.org/wiki/Job-shop_scheduling) is an
 optimization problem where the goal is to schedule jobs on a certain number of
-machines according to a process order. The objective is to minimize the total 
-hours that takes to process all the jobs on all machines.
+machines according to a process order for each job.
+The objective is to minimize the length of schedule also called make-span, or 
+completion time of the last task of all jobs.
 
 This example demonstrates a means of formulating and optimizing Job Shop 
-Scheduling for a set of jobs that should be processed on a certain of
-machines according to a process order and duration. This is done using 
- [constrained quadratic model](
+Scheduling using [constrained quadratic model](
 https://docs.ocean.dwavesys.com/en/stable/concepts/cqm.html#cqm-sdk) (CQM) that
 can be solved using the D-Wave CQM solver.
 
@@ -18,59 +17,58 @@ To run the demo, type:
 
     python job_shop_scheduler.py
 
-The demo program outputs an optimal solution for a 3 by 3 job shop scheduling 
-problem (3 jobs and 3 machines) defined by a problem file.  By default,
-the demo program uses the file data/instance_3_3.txt as problem file.
+The demo program outputs an optimal solution for a 5 * 5 job shop scheduling 
+problem (5 jobs and 5 machines) defined by a problem file.  By default,
+the demo program uses the file input/instance_5_5.txt as problem file.
 
 To solve a different problem instance, type:
 
-    python job_shop_scheduler.py --path <path to your problem file>
+    python job_shop_scheduler.py -instance <path to your problem file>
+
+These additional parameters can be passed to the job_shop_scheduler.py
+  -h, --help    show this help message and exit
+  -instance     path to the input instance file
+  -tl           time limit in seconds
+  -os           path to the output solution file
+  -op           path to the output plot file
 
 
-The program produces an illustration of the solution such as this:
+The program produces a solution file like this:
 
-![Example Solution](_static/solution_5_5.png)
+```
+#Number of jobs: 5
+#Number of machines: 5
+#Completion time: 23.0
 
-The plot is saved to `output.png`.
+#__________________________________________
+11   3   8   3   4   4   19   3   17   2
+21   2   16  4   11  1   14   0   4    2
+18   3   11  5   16  2   0    5   8    0
+14   4   4   4   1   2   13   1   8    5
+4    0   0   4   0   0   8    5   4    0
+```
+where each row represent a job. The odd columns are machine numbers with the
+processing duration in even columns. 
+
+Following is an illustration of this solution. 
+
+
+![Example Solution](_static/instance5_5.png)
+
+if -os or -op are not passed, the plot is saved as `instance.png` 
+and the solution is saved as `instance.sol`
 
 ### Generating Problem Instances
 
 To generate random problem instances, for example a 5 by 6 instance
 with maximum 8 hours duration type:
 
-    python utils/jss_generator.py -n 5 -m 5 -d 8 -path data
+    python utils/jss_generator.py -n 5 -m 6 -d 8 -path input
 
 The random problem file is written to the path provided with -path option.
 
-Additional parameters are described by:
 
-    python problem_gen.py --help
-
-## Code Overview
-
-We frame the job shop scheduling problem as a constrained optimization problem
-with the objective of minimizing total processing times for all jobs. 
-
-Given `N` number of jobs (`{j_1, j_2, ..., j_k, ... j_N }`) and `M` number of
-machines where each job `k` needs to be processed on some or all machines 
-according to a process order `{P_k_1, P_k_2, ... P_k_m}` and a process duration 
-'D' `{D_k_1, D_k_2, ... D_k_m}` the objective is to minimize the total process time.  
-
-Variables:
-
-We define integer variables `x_j_i` to model start of each job 'j' on machine 'i'
-We use binary variable 'y_j_k_i' to define if job 'k' precedes job 'j' on machine 'i'
-we use one integer variable 'make_span' to define the make span of a jss problem.
-
-Objective of the model:
-
-Our objective is to minimize the make span of the given jss problem.
-
-The constraints of the problem are as follows:
-
-Precedence constraints: Ensures that all operations of a job are executed in the
-given order.
-
+## Model and Code Overview
 
 ### Problem Parameters
 
@@ -83,16 +81,94 @@ These are the parameters of the problem:
 - `M_(j,t)`:  is the machine that processes task `t` of job `j`
 - `T_(j,i)`  : is the task that is processed by machine `i` for job `j` 
 - `D_(j,t)`:  is the processing duration that task `t` needs for job `j`
+- `V`:  maximum possible make span
 
-### Variables: 
+### Variables
 
-- `w` is a positive integer
-- `x_(j_i)` is positive integer 
-- `y_(j_k,i)` is a binary
+- `w` is a positive integer variable that define the completion time (make-span)
+of the jJSS
+- `x_(j_i)` is positive integer variables used to model start of each job 'j' on
+  machine 'i'
+- `y_(j_k,i)` is a binary to define if job 'k' precedes job 'j' o
 
+### Objective
+
+Our objective is to minimize the make-span of the given JSS problem and is simply 
+stated as:
+
+```
+minimize w
+```
 
 ### Constraints
-![](_static/equations.png)
+- #### Precedence Constraint:
+
+Our first constraint enforces the precedence constraint. This ensures that all
+operations of a job are executed in the given order.
+
+![equation1](_static/eq1.png)
+
+This constraint ensures that for a give job `j` a task on a machine starts when
+previous task is finished. As an example for consecutive tasks 4 and 5 of 
+job 3, that runs on machine 6 and 1, respectively, and also assuming that 
+tasks 4 takes 12 hours to finish we add this constraint:
+`x_3_6 >= x_3_1 + 12`
+
+- #### No Overlap constraints
+This constraint ensures that jobs don't use any machine at the same time. 
+![](_static/eq2.png)
+
+Usually this constraint is modeled as two disjunctive linear constraint 
+[Ku et al. (2016)](#Manne), however, it is more efficient to model this as one
+single quadratic inequality constraint. 
+In addition, using quadratic equation eliminates the need for using the so called 
+`Big M` value to activate or relax constraint. 
+
+Assume that there are two jobs 3 and 8 that need to use machine 5, each requiring 
+processing duration of 12 and 2 on this machine, respectively.
+The following two constraints ensure that these two jobs doesn't use machine 5 
+at the same time. 
+
+`x_3,5 + 12 <= x_8,5` and `x_8,5 + 2 <= x_3,5`.
+
+A Binary variable `y_3,8,5` is needed to choose between these two constraints. 
+if `y_3,8,5 = 1` we want the first constraint to be enforced and if zero we want
+to enforce the second constraint.
+If we were modeling this constraint using disjunctive model we need these two
+disjunctive linear constraints 
+`x_3,5 + 12 <= x_8,5 + y_3,8,5 + V * y_3,8,5`
+`x_8,5 + 2 <= x_3,5 + y_3,8,5  + (1- V) * y_3,8,5`
+Where `V` is the lowest possible value for `Big M`. 
+
+
+In the quadratic model the following single constraint will fulfil the same
+behaviour
+
+`x_3,5 - x_8,5 - 10 y_3,8,5 + 2 y_3,8,5 (x_8,5 - x_3,5) >= 2`
+
+if  `y_3,8,5 = 0` we have `x_3,5 - x_8,5  >= 2'
+
+if `y_3,8,5 =0` we have `x_8,5  - x_3,5 >= 12`
+
+
+## Make Span Constraint. 
+The make span  of a JSS problem can be calculated by obtaining the maximum of 
+completion time of the last task of all jobs. This can be obtaining using the 
+inequality constraints of [equation 3](#eq3)
+
+![eq3](_static/eq3.png)
+
+##References
+
+<a id="Manne"></a>
+A. S. Manne, On the job-shop scheduling problem, Operations Research , 1960, 
+Pages 219-223.
+
+
+<a id="Ku"></a>
+Wen-Yang Ku, J. Christopher Beck, Mixed Integer Programming models for job 
+shop scheduling: A computational analysis, Computers & Operations Research,
+Volume 73, 2016, Pages 165-173.
 
 
 ## License

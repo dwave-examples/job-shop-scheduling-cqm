@@ -1,6 +1,7 @@
 from dimod import BINARY, INTEGER, sym, CQM
 from os import path
 from collections import defaultdict
+from tabulate import tabulate
 
 
 def print_cqm_stats(cqm: CQM) -> None:
@@ -35,23 +36,20 @@ def print_cqm_stats(cqm: CQM) -> None:
     assert (num_quadratic_constraints + num_linear_constraints ==
             len(cqm.constraints))
 
-    print(" \n ============================= MODEL INFORMATION "
-          "=================================")
-    print('Model\t\tVariables\t\t\t\t'
-          '  Constraints\t\t\t Constraint.sensitivity  ')
-    print('-----\t----------------\t--------------------------'
-          '\t\t-----------------------')
-    print("\t\t Binary  Integer \t  Quad \t Linear  One-hot \t\t EQ "
-          "\t LT\t\t GT")
+    print(" \n" + "=" * 25 + "MODEL INFORMATION" + "=" * 25)
     print(
-        "\t\t------  ------  \t  ------  ------  ------  \t\t------  ------"
-        "  ------  ")
+        ' ' * 10 + 'Variables' + " " * 10 + 'Constraints' + " " * 15 +
+        'sensitivity')
+    print('-' * 20 + " " + '-' * 28 + ' ' + '-' * 18)
 
-    print("CQM", "{:10d} {:8d}   {:8d}{:8d}{:8d}\t\t{:8d}{:8d}{:8d}\n\n".
-          format(num_binaries, num_integers, num_quadratic_constraints,
-                 num_linear_constraints, num_discretes,
-                 num_equality_constraints,
-                 num_le_inequality_constraints, num_ge_inequality_constraints))
+    print(tabulate([["Binary", "Integer", "Quad", "Linear", "One-hot", "EQ  ",
+                     "LT", "GT"],
+                    [num_binaries, num_integers, num_quadratic_constraints,
+                     num_linear_constraints, num_discretes,
+                     num_equality_constraints,
+                     num_le_inequality_constraints,
+                     num_ge_inequality_constraints]],
+                   headers="firstrow"))
 
 
 def read_instance(instance_path: str) -> dict:
@@ -78,7 +76,7 @@ def read_instance(instance_path: str) -> dict:
 
 
 def write_solution_to_file(data, solution: dict, completion: int,
-                           solution_file_path: str) -> str:
+                           solution_file_path: str) -> None:
     """ write solution to a file.
 
     Args:
@@ -90,22 +88,10 @@ def write_solution_to_file(data, solution: dict, completion: int,
 
     """
 
-    if solution_file_path is None:
-        filename = 'sol' + str(data.num_jobs) + '_' + \
-                   str(data.num_machines)
-
-        updated_solution_file_path = 'output' + '/' + filename + '.sol'
-    else:
-        updated_solution_file_path = solution_file_path
-
-    if path.exists(updated_solution_file_path):
-        print(updated_solution_file_path, "already exist. overwriting existing "
-                                          "file!")
-
-    with open(updated_solution_file_path, 'w') as f:
+    with open(solution_file_path, 'w') as f:
         f.write('#Number of jobs: ' + str(data.num_jobs) + '\n')
         f.write('#Number of machines: ' + str(data.num_machines) + '\n')
-        f.write('#Comletion time: ' + str(
+        f.write('#Completion time: ' + str(
             completion) + '\n\n')
         f.write('#' + '_' * 150 + '\n')
 
@@ -117,4 +103,3 @@ def write_solution_to_file(data, solution: dict, completion: int,
                                   (j, data.machine_task[(j, i)])])
                           for i in range(data.num_machines)]) + '\n')
         f.close()
-    return updated_solution_file_path

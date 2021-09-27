@@ -103,4 +103,5 @@ if __name__ == "__main__":
     sol, dur = read_solution(filename)
 
     plotjssp(sol, dur)
+    plt.savefig('out.png')
     plt.show()

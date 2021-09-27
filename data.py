@@ -4,7 +4,7 @@ from utils.utils import read_instance
 class Data:
     """ A class that reads and prepare data for job shop scheduling problem."""
 
-    def __init__(self):
+    def __init__(self, input_file):
         self.num_jobs = 0
         self.num_machines = 0
         # Upper bound for maximum make span
@@ -12,6 +12,7 @@ class Data:
         self.task_duration = {}
         self.task_machine = {}
         self.machine_task = {}
+        self.instance_name = input_file.split(sep="/")[-1].split(".")[0]
 
     def read_input_data(self, filename):
         # Read input file
