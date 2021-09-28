@@ -1,7 +1,8 @@
-from dimod import BINARY, INTEGER, sym, CQM
-from os import path
 from collections import defaultdict
 from tabulate import tabulate
+import os
+
+from dimod import BINARY, INTEGER, sym, CQM
 
 
 def print_cqm_stats(cqm: CQM) -> None:
@@ -53,7 +54,7 @@ def print_cqm_stats(cqm: CQM) -> None:
 
 
 def read_instance(instance_path: str) -> dict:
-    """ A method that reads input instance file
+    """A method that reads input instance file
 
     Args:
         instance_path:  path to the job shop instance file
@@ -77,7 +78,7 @@ def read_instance(instance_path: str) -> dict:
 
 def write_solution_to_file(data, solution: dict, completion: int,
                            solution_file_path: str) -> None:
-    """ write solution to a file.
+    """write solution to a file.
 
     Args:
         data: a class containing JSS data
@@ -103,3 +104,7 @@ def write_solution_to_file(data, solution: dict, completion: int,
                                   (j, data.machine_task[(j, i)])])
                           for i in range(data.num_machines)]) + '\n')
         f.close()
+
+        print(f'Saved schedule to '
+              f'{os.path.join(os.getcwd(), solution_file_path)}')
+

@@ -13,7 +13,7 @@ def generate_random_jss(n_jobs: int, n_machine: int, max_operation_time: int,
         n_jobs: number of jobs
         n_machine: number of machines
         max_operation_time: maximum operation time
-        location: path to the generate file
+        location: path to the generated file
     returns:
         job_dict:
     """
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         description='Job Shop Scheduling Instance Generator')
 
     parser.add_argument('-n', type=int, help='num of jobs')
-    parser.add_argument('-m', type=int, help='num of jobs')
+    parser.add_argument('-m', type=int, help='num of machines')
     parser.add_argument('-d', type=int, help='maximum processing duration')
     parser.add_argument('-path', type=str,
                         help='folder location to store generated instance file')

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import sys
+import os
 
 
 def prep_solution_for_plotting(data, solution: dict) -> tuple:
@@ -55,11 +56,12 @@ def read_solution(path: str) -> tuple:
     return job_start_time, processing_time
 
 
-def plotjssp(job_start_times: dict, processing_time: dict) -> None:
+def plotjssp(job_start_times: dict, processing_time: dict, location) -> None:
     """This function plots job shop problem 
     Args:
         job_start_times: start time of each job on each machine
         processing_time: processing duration of each job on each machine
+        location: path for saving scheduling plot
     """
 
     sols = np.array(list(job_start_times.values()))
@@ -90,6 +92,10 @@ def plotjssp(job_start_times: dict, processing_time: dict) -> None:
                         color=text_color)
     ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1),
               loc='lower left', fontsize='small')
+
+    plt.savefig(location)
+
+    print(f'Saved plot to {os.path.join(os.getcwd(), location)}')
 
     return
 
