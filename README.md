@@ -17,9 +17,10 @@ To run the demo, type:
 
     python job_shop_scheduler.py
 
-The demo program outputs an optimal solution for a 5 * 5 job shop scheduling 
-problem (5 jobs and 5 machines) defined by a problem file.  By default,
-the demo program uses the file input/instance_5_5.txt as the problem file.
+The demo program solves a 5 * 5 job shop scheduling problem
+(5 jobs and 5 machines) defined by `input/instance_5_5.txt`. The solution
+returned by Leap hybrid CQM solver is then saved to `instance.sol` and the 
+scheduling plot is saved to `instance.png`.
 
 To solve a different problem instance, type:
 
