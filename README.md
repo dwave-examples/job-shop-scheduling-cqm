@@ -102,7 +102,7 @@ minimize w
 ```
 
 ### Constraints
-- #### Precedence Constraint:
+#### Precedence Constraint:
 
 Our first constraint, [equation 1](#eq2), enforces the precedence constraint.
 This ensures that all operations of a job are executed in the given order.
@@ -115,7 +115,7 @@ tasks 4 and 5 of job 3 that run on machine 6 and 1, respectively,
 assuming that task 4 takes 12 hours to finish, we add this constraint:
 `x_3_6 >= x_3_1 + 12`
 
-- #### No-Overlap constraints
+#### No-Overlap constraints
 Our second constraint, [equation 2](#eq2), ensures that jobs don't use any machine at the same time. 
 ![eq2](_static/eq2.png)          (2)
 
@@ -126,40 +126,18 @@ In addition, using quadratic equation eliminates the need for using the so calle
 `Big M` value to activate or relax constraint
 (https://en.wikipedia.org/wiki/Big_M_method). 
 
-We use an example to describe our quadratic constraint, [equation 2](#eq2). 
-Assume that there are two jobs, 3 and 8, that need to use machine 5, each requiring 
-processing duration of 12 and 2 on this machine, respectively.
-The following two constraints ensure that these two jobs don't use machine 5 
-at the same time. 
-
-`x_3,5 + 12 <= x_8,5` and `x_8,5 + 2 <= x_3,5`.
-
-Binary variable `y_3,8,5` is needed to choose between these two constraints. 
-if `y_3,8,5 = 1` we want to enforce the first constraint and if `y_3,8,5 = 0`
-we want to enforce the second constraint.
-If we were modeling these constraints using the linear disjunctive model
-we would need these two:
-
-`x_3,5 + 12 <= x_8,5 + y_3,8,5 + V * y_3,8,5`
-
-`x_8,5 + 2 <= x_3,5 + y_3,8,5  + (1- V) * y_3,8,5`
-
-where `V` is the lowest possible value for `Big M`. 
+The proposed quadratic equation fulfill the same behaviour as the linear
+constraints:
+There are two cases:
+- if `y_j,k,i = 0` job j is processed after job k:  
+  ![equation2_1](_static/eq2_1.png)   
+- if `y_j,k,i = 1` job k is processed after job j:  
+  ![equation2_2](_static/eq2_2.png)   
+  Since these equations are applied to every pair of jobs,
+  they guarantee that the jobs don't overlap on a machine.
 
 
-In the quadratic model the following single constraint will fulfil the same
-behaviour
-
-`x_3,5 - x_8,5 - 10 y_3,8,5 + 2 y_3,8,5 (x_8,5 - x_3,5) >= 2`
-
-Depending on the value of `y_3,8,5` one of these constraint are enforced:
-
-   a) if  `y_3,8,5 = 1` we have `x_3,5 - x_8,5  >= 2` 
-
-   b) if `y_3,8,5 = 0`  we have `x_8,5  - x_3,5 >= 12`
-
-
-- #### Make-Span Constraint. 
+#### Make-Span Constraint. 
 The make-span of a JSS problem can be calculated by obtaining the maximum 
 completion time for the last task of all jobs. This can be obtained using 
 the inequality constraint of [equation3](#eq3)
