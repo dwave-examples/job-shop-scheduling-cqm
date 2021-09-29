@@ -1,20 +1,24 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
-import sys
 import os
+from collections import defaultdict
+
+import numpy as np
+import argparse
+import matplotlib
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    matplotlib.use("agg")
+    import matplotlib.pyplot as plt
 
 
-def prep_solution_for_plotting(data, solution: dict) -> tuple:
-    """prepare Jss solution for plotting
+def plot_solution(data, solution: dict, location: str = None) -> tuple:
+    """Prepare Jss solution for plotting
 
     Args:
-        data:
-        solution: a
-
-     Returns:
-        job_start_time: start time of each job on each machine
-        processing_time: processing duration of each job on each machine
+        data: JSS data class
+        solution: a dictionary of solution
+        location: path for saving scheduling plot
 
     """
     job_start_time = defaultdict(list)
@@ -25,6 +29,8 @@ def prep_solution_for_plotting(data, solution: dict) -> tuple:
         processing_time[j] = [
             data.task_duration[j, data.machine_task[(j, i)]] for i in
             range(data.num_machines)]
+    if location is not None:
+        plot_schedule_core(job_start_time, processing_time, location)
     return job_start_time, processing_time
 
 
@@ -56,15 +62,16 @@ def read_solution(path: str) -> tuple:
     return job_start_time, processing_time
 
 
-def plotjssp(job_start_times: dict, processing_time: dict, location) -> None:
-    """This function plots job shop problem 
+def plot_schedule_core(job_start_time: dict, processing_time: dict,
+                       location) -> None:
+    """This function plots job shop problem
     Args:
-        job_start_times: start time of each job on each machine
+        job_start_time: start time of each job on each machine
         processing_time: processing duration of each job on each machine
         location: path for saving scheduling plot
     """
 
-    sols = np.array(list(job_start_times.values()))
+    sols = np.array(list(job_start_time.values()))
     durs = np.array(list(processing_time.values()))
     solsT = sols.transpose()
     dursT = durs.transpose()
@@ -101,13 +108,21 @@ def plotjssp(job_start_times: dict, processing_time: dict, location) -> None:
 
 
 if __name__ == "__main__":
-    try:
-        filename = sys.argv[1]
-    except:
-        filename = "output/sol3_3.sol"
+    parser = argparse.ArgumentParser(
+        description='Plot a schedule given by a JSS solution file.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    sol, dur = read_solution(filename)
+    parser.add_argument('s', type=str,
+                        help='path to the input solution file')
 
-    plotjssp(sol, dur)
-    plt.savefig('out.png')
+    parser.add_argument('-op', type=str,
+                        help='path to the output plot file',
+                        default="schedule.png")
+
+    args = parser.parse_args()
+    input_solution = args.s
+    out_solution = args.op
+    job_start_time, processing_time = read_solution(input_solution)
+    plot_schedule_core(job_start_time, processing_time, out_solution)
+    plt.savefig('schedule.png')
     plt.show()

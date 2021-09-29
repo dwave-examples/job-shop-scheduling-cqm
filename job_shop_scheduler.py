@@ -1,13 +1,12 @@
 from time import time
 from tabulate import tabulate
 import argparse
-import matplotlib.pyplot as plt
 
 from dimod import ConstrainedQuadraticModel, Binary, Integer, SampleSet
 from dwave.system import LeapHybridCQMSampler
 
 from utils.utils import print_cqm_stats, write_solution_to_file
-import utils.plotjobs as job_plotter
+import utils.plot_schedule as job_plotter
 from data import Data
 
 
@@ -159,11 +158,11 @@ if __name__ == "__main__":
 
     parser.add_argument('-os', type=str,
                         help='path to the output solution file',
-                        default='instance.sol')
+                        default='solution.txt')
 
     parser.add_argument('-op', type=str,
                         help='path to the output plot file',
-                        default='instance.png')
+                        default='schedule.png')
 
     # Parse input arguments.
     args = parser.parse_args()
@@ -176,7 +175,7 @@ if __name__ == "__main__":
     jss_data = Data(input_file)
 
     print(" \n" + "=" * 25 + "INPUT SETTINGS" + "=" * 25)
-    print(tabulate([["Input-instance", "Time-limit"],
+    print(tabulate([["Input Instance", "Time Limit"],
                     [jss_data.instance_name, time_limit]],
                    headers="firstrow"))
 
@@ -217,10 +216,10 @@ if __name__ == "__main__":
     solver_time = time() - current_time
 
     # Print results.
-    print(" \n" + "=" * 52 + "SOLUTION RESULTS" + "=" * 52)
-    print(tabulate([["Completion-Time(interval)", "Max-possible-make-span",
-                     "model_building_time(s)", "solver-call-time(s)",
-                     "Total-runtime(s)"],
+    print(" \n" + "=" * 55 + "SOLUTION RESULTS" + "=" * 55)
+    print(tabulate([["Completion Time", "Max Possible Make-Span",
+                     "Model Building Time (s)", "Solver Call Time (s)",
+                     "Total Runtime (s)"],
                     [model.completion_time, jss_data.max_makespan,
                      model_building_time, solver_time, time() - start_time]],
                    headers="firstrow"))
@@ -230,8 +229,4 @@ if __name__ == "__main__":
         jss_data, model.solution, model.completion_time, out_sol_file)
 
     # Plot solution
-    job_start_time, processing_time = \
-        job_plotter.prep_solution_for_plotting(jss_data, model.solution)
-
-    job_plotter.plotjssp(job_start_time, processing_time, out_plot_file)
-
+    job_plotter.plot_solution(jss_data, model.solution, out_plot_file)

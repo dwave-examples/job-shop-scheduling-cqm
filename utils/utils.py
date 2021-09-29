@@ -2,17 +2,17 @@ from collections import defaultdict
 from tabulate import tabulate
 import os
 
-from dimod import BINARY, INTEGER, sym, CQM
+from dimod import BINARY, INTEGER, sym, ConstrainedQuadraticModel
 
 
-def print_cqm_stats(cqm: CQM) -> None:
+def print_cqm_stats(cqm: ConstrainedQuadraticModel) -> None:
     """Print some information about the CQM model
 
     Args:
         cqm: a dimod cqm model (dimod.cqm)
 
     """
-    if not isinstance(cqm, CQM):
+    if not isinstance(cqm, ConstrainedQuadraticModel):
         raise ValueError("input instance should be a dimod CQM model")
     num_binaries = sum(cqm.vartype(v) is BINARY for v in cqm.variables)
     num_integers = sum(cqm.vartype(v) is INTEGER for v in cqm.variables)
@@ -40,7 +40,7 @@ def print_cqm_stats(cqm: CQM) -> None:
     print(" \n" + "=" * 25 + "MODEL INFORMATION" + "=" * 25)
     print(
         ' ' * 10 + 'Variables' + " " * 10 + 'Constraints' + " " * 15 +
-        'sensitivity')
+        'Sensitivity')
     print('-' * 20 + " " + '-' * 28 + ' ' + '-' * 18)
 
     print(tabulate([["Binary", "Integer", "Quad", "Linear", "One-hot", "EQ  ",
@@ -78,7 +78,7 @@ def read_instance(instance_path: str) -> dict:
 
 def write_solution_to_file(data, solution: dict, completion: int,
                            solution_file_path: str) -> None:
-    """write solution to a file.
+    """Write solution to a file.
 
     Args:
         data: a class containing JSS data

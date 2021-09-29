@@ -4,7 +4,7 @@ from dimod import sym, BINARY, INTEGER
 
 from job_shop_scheduler import JSSCQM
 from data import Data
-import utils.plotjobs as job_plotter
+import utils.plot_schedule as job_plotter
 
 
 class TestData(unittest.TestCase):
@@ -30,7 +30,7 @@ class TestData(unittest.TestCase):
                     (2, 2): 0.0}
 
         job_start_time, processing_time = \
-            job_plotter.prep_solution_for_plotting(test_data, solution)
+            job_plotter.plot_solution(test_data, solution)
         self.assertEqual({0: [3.0, 5.0, 1.0],
                           1: [5.0, 1.0, 3.0],
                           2: [4.0, 2.0, 0.0]}, job_start_time)

@@ -19,20 +19,40 @@ To run the demo, type:
 
 The demo program solves a 5 * 5 job shop scheduling problem
 (5 jobs and 5 machines) defined by `input/instance_5_5.txt`. The solution
-returned by Leap hybrid CQM solver is then saved to `instance.sol` and the 
-scheduling plot is saved to `instance.png`.
+returned by the Leap hybrid CQM solver is then saved to `solution.txt` and the 
+scheduling plot is saved to `shcedule.png`.
 
 To solve a different problem instance, type:
 
     python job_shop_scheduler.py -instance <path to your problem file>
+
+There are several instances under `input` folder. Alternatively, a random 
+instance file could be generated using `utils/jss_generator` discussed under
+[Problem generator](#Generating Problem Instances) section.
+
+This is an example of JSS input instance file for 5 * 5 problem: 
+```
+5   5
+2   4   1   3   0   3   4   2   3   3
+4   2   2   1   3   0   1   4   0   2
+3   5   4   0   1   5   2   2   0   3
+2   2   1   4   4   5   3   1   0   4
+2   0   1   4   4   0   0   0   3   5
+```
+
+where the first row represents number of jobs and machines, respectively. 
+Rows 2 and after represent information for each job. The odd columns are 
+the tasks that should be processed sequentially, where the information under 
+each column is the machine that a task use. The processing duration for each 
+task is given in even columns. 
 
 These additional parameters can be passed to `job_shop_scheduler.py`:
 
     -h, --help          show this help message and exit
     -instance INSTANCE  path to the input instance file; (default: input/instance5_5.txt)
     -tl TL              time limit in seconds (default: None)
-    -os OS              path to the output solution file (default: instance.sol)
-    -op OP              path to the output plot file (default: instance.png)
+    -os OS              path to the output solution file (default: solution.txt)
+    -op OP              path to the output plot file (default: shcedule.png)
 
 
 The program produces a solution file like this:
@@ -50,7 +70,8 @@ The program produces a solution file like this:
 4    0   0   4   0   0   8    5   4    0
 ```
 where each row represents a job. The odd columns are machine numbers with the
-processing duration in even columns. 
+processing duration in even columns. For each job (row) first pair from the left
+uses machine 0, second pair uses machine 1 and so forth.
 
 The following graphic is an illustration of this solution. 
 
@@ -60,12 +81,15 @@ The following graphic is an illustration of this solution.
 
 ### Generating Problem Instances
 
-To generate random problem instances, for example a 5 by 6 instance
-with maximum 8 hours duration, type:
+`utils/jss_generator.py` can be used to generate random problem instances.
+For example, a 5 * 6 instance with a maximum duration of 8 hours can be
+generated with:
 
-    python utils/jss_generator.py -n 5 -m 6 -d 8 -path input
+`python utils/jss_generator.py 5 6 8 -path < folder location to store generated instance file location>`
 
-The random problem file is written to the path provided with -path option.
+To see a full description of the options, type:
+
+`python utils/jss_generator.py -h`
 
 
 ## Model and Code Overview
@@ -89,9 +113,9 @@ These are the parameters of the problem:
 
 - `w` is a positive integer variable that defines the completion time (make-span)
 of the JSS
-- `x_(j_i)` are positive integer variables used to model start of each job 'j' on
-  machine 'i'
-- `y_(j_k,i)` are binaries which define if job 'k' precedes job 'j' on machine `i`
+- `x_(j_i)` are positive integer variables used to model start of each job `j` on
+  machine `i`
+- `y_(j_k,i)` are binaries which define if job `k` precedes job 'j' on machine `i`
 
 ### Objective
 
@@ -103,7 +127,7 @@ minimize w
 ```
 
 ### Constraints
-#### Precedence Constraint:
+#### Precedence Constraint
 
 Our first constraint, [equation 1](#eq2), enforces the precedence constraint.
 This ensures that all operations of a job are executed in the given order.
@@ -117,28 +141,28 @@ assuming that task 4 takes 12 hours to finish, we add this constraint:
 `x_3_6 >= x_3_1 + 12`
 
 #### No-Overlap constraints
-Our second constraint, [equation 2](#eq2), ensures that jobs don't use any machine at the same time. 
+Our second constraint, [equation 2](#eq2), ensures that multiple jobs don't use any machine at the same time. 
 ![eq2](_static/eq2.png)          (2)
 
 Usually this constraint is modeled as two disjunctive linear constraints 
 ([Ku et al. (2016)](#Ku) and [Manne et al. 1960](#Manne)); however, 
 it is more efficient to model this as a single quadratic inequality constraint. 
-In addition, using quadratic equation eliminates the need for using the so called 
+In addition, using this quadratic equation eliminates the need for using the so called 
 `Big M` value to activate or relax constraint
 (https://en.wikipedia.org/wiki/Big_M_method). 
 
-The proposed quadratic equation fulfill the same behaviour as the linear
+The proposed quadratic equation fulfills the same behaviour as the linear
 constraints:
 There are two cases:
-- if `y_j,k,i = 0` job j is processed after job k:  
+- if `y_j,k,i = 0` job `j` is processed after job `k`:  
   ![equation2_1](_static/eq2_1.png)   
-- if `y_j,k,i = 1` job k is processed after job j:  
+- if `y_j,k,i = 1` job `k` is processed after job `j`:  
   ![equation2_2](_static/eq2_2.png)   
   Since these equations are applied to every pair of jobs,
   they guarantee that the jobs don't overlap on a machine.
 
 
-#### Make-Span Constraint. 
+#### Make-Span Constraint 
 The make-span of a JSS problem can be calculated by obtaining the maximum 
 completion time for the last task of all jobs. This can be obtained using 
 the inequality constraint of [equation3](#eq3)
