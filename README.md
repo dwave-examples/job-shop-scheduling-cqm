@@ -20,17 +20,17 @@ To run the demo, type:
 The demo program solves a 5 * 5 job shop scheduling problem
 (5 jobs and 5 machines) defined by `input/instance_5_5.txt`. The solution
 returned by the Leap hybrid CQM solver is then saved to `solution.txt` and the 
-scheduling plot is saved to `shcedule.png`.
+scheduling plot is saved to `schedule.png`.
 
 To solve a different problem instance, type:
 
     python job_shop_scheduler.py -instance <path to your problem file>
 
 There are several instances under `input` folder. Alternatively, a random 
-instance file could be generated using `utils/jss_generator` discussed under
-[Problem generator](#Generating Problem Instances) section.
+instance file could be generated using `utils/jss_generator.py` as discussed 
+under the [Problem generator](#Generating Problem Instances) section.
 
-This is an example of JSS input instance file for 5 * 5 problem: 
+This is an example of a JSS input instance file for a 5 * 5 problem: 
 ```
 5   5
 2   4   1   3   0   3   4   2   3   3
@@ -40,11 +40,11 @@ This is an example of JSS input instance file for 5 * 5 problem:
 2   0   1   4   4   0   0   0   3   5
 ```
 
-where the first row represents number of jobs and machines, respectively. 
-Rows 2 and after represent information for each job. The odd columns are 
-the tasks that should be processed sequentially, where the information under 
-each column is the machine that a task use. The processing duration for each 
-task is given in even columns. 
+where the first row represents the number of jobs and machines, respectively. 
+Each row after represents a job. Every two columns represents one task and 
+should be read sequentially. A number in an odd column represents the machine 
+required for the task and a number in an even column represents the task's 
+processing duration. 
 
 These additional parameters can be passed to `job_shop_scheduler.py`:
 
@@ -69,9 +69,9 @@ The program produces a solution file like this:
 14   4   4   4   1   2   13   1   8    5
 4    0   0   4   0   0   8    5   4    0
 ```
-where each row represents a job. The odd columns are machine numbers with the
-processing duration in even columns. For each job (row) first pair from the left
-uses machine 0, second pair uses machine 1 and so forth.
+where each row represents a job. The odd columns are start time of using
+a machine with the processing duration in even columns. For each job (row) 
+first pair from the left uses machine 0, second pair uses machine 1 and so forth.
 
 The following graphic is an illustration of this solution. 
 
