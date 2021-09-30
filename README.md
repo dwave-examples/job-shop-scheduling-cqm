@@ -28,7 +28,7 @@ To solve a different problem instance, type:
 
 There are several instances under `input` folder. Alternatively, a random 
 instance file could be generated using `utils/jss_generator.py` as discussed 
-under the [Problem generator](#Generating Problem Instances) section.
+under the [Problem generator](#Generating-Problem-Instances) section.
 
 This is an example of a JSS input instance file for a 5 * 5 problem: 
 ```
@@ -84,7 +84,7 @@ The following graphic is an illustration of this solution.
 For example, a 5 * 6 instance with a maximum duration of 8 hours can be
 generated with:
 
-`python utils/jss_generator.py 5 6 8 -path < folder location to store generated instance file location>`
+`python utils/jss_generator.py 5 6 8 -path < folder location to store generated instance file >`
 
 To see a full description of the options, type:
 
@@ -114,7 +114,7 @@ These are the parameters of the problem:
 of the JSS
 - `x_(j_i)` are positive integer variables used to model start of each job `j` on
   machine `i`
-- `y_(j_k,i)` are binaries which define if job `k` precedes job 'j' on machine `i`
+- `y_(j_k,i)` are binaries which define if job `k` precedes job `j` on machine `i`
 
 ### Objective
 
@@ -144,7 +144,7 @@ Our second constraint, [equation 2](#eq2), ensures that multiple jobs don't use 
 ![eq2](_static/eq2.png)          (2)
 
 Usually this constraint is modeled as two disjunctive linear constraints 
-([Ku et al. (2016)](#Ku) and [Manne et al. 1960](#Manne)); however, 
+([Ku et al. 2016](#Ku) and [Manne et al. 1960](#Manne)); however, 
 it is more efficient to model this as a single quadratic inequality constraint. 
 In addition, using this quadratic equation eliminates the need for using the so called 
 `Big M` value to activate or relax constraint
