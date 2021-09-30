@@ -89,11 +89,11 @@ def write_solution_to_file(data, solution: dict, completion: int,
 
     """
 
-    main_header = "Job ID  "
+    main_header = " " * 10
     for i in range(data.num_machines):
         main_header += " " * 8 + f'machine {i}' + " " * 7
 
-    header = []
+    header = ['job id']
     for i in range(data.num_machines):
         header.extend(['task', 'start', 'dur'])
 
