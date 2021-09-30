@@ -55,28 +55,27 @@ These additional parameters can be passed to `job_shop_scheduler.py`:
     -op OP              path to the output plot file (default: shcedule.png)
 
 
-The program produces a solution file like this:
+The program produces a solution schedule like this:
 
 ```
 #Number of jobs: 5
 #Number of machines: 5
 #Completion time: 23.0
 
-#__________________________________________
-11   3   8   3   4   4   19   3   17   2
-21   2   16  4   11  1   14   0   4    2
-18   3   11  5   16  2   0    5   8    0
-14   4   4   4   1   2   13   1   8    5
-4    0   0   4   0   0   8    5   4    0
+Job ID          machine 0               machine 1               machine 2               machine 3               machine 4       
+      task    start    dur    task    start    dur    task    start    dur    task    start    dur    task    start    dur
+--  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----
+ 0       2       11      3       1        8      3       0        2      4       4       16      3       3       14      2
+ 1       4       21      2       2       16      4       3        9      1       1       16      0       0        5      2
+ 2       3       18      3       4       11      5       1       16      2       2        1      5       0        8      0
+ 3       2       14      4       1        4      4       4        0      2       3       13      1       0        8      5
+ 4       2        7      0       1        0      4       4        0      0       0        7      5       3        4      0
 ```
-where each row represents a job. The odd columns are start time of using
-a machine with the processing duration in even columns. For each job (row) 
-first pair from the left uses machine 0, second pair uses machine 1 and so forth.
 
 The following graphic is an illustration of this solution. 
 
 
-![Example Solution](_static/instance5_5.png)
+![Example Solution](_static/schedule.png)
 
 
 ### Generating Problem Instances

@@ -131,10 +131,12 @@ class JSSCQM():
         print(" \n" + "=" * 30 + "FEASIBLE SAMPLE SET" + "=" * 30)
         print(feasible_samples)
         self.solution = {
-            (j, i): self.best_feasible_sample[self.x[(j, i)].variables[0]]
-            for i in range(data.num_machines) for j in
-            range(data.num_jobs)}
+            (j, i): (data.task_machine[(j, i)],
+                self.best_feasible_sample[self.x[(j, i)].variables[0]],
+                data.task_duration[(j, data.machine_task[(j, i)])])
+            for i in range(data.num_machines) for j in range(data.num_jobs)}
         self.completion_time = self.best_feasible_sample['makespan']
+        print(self.solution)
 
 
 if __name__ == "__main__":
@@ -208,6 +210,7 @@ if __name__ == "__main__":
 
     # Finished building the model now time it.
     model_building_time = time() - start_time
+
     current_time = time()
     # Call cqm solver.
     model.call_cqm_solver(time_limit, jss_data)

@@ -89,6 +89,54 @@ def write_solution_to_file(data, solution: dict, completion: int,
 
     """
 
+    main_header = "Job ID  "
+    for i in range(data.num_machines):
+        main_header += " " * 8 + f'machine {i}' + " " * 7
+
+    header = []
+    for i in range(data.num_machines):
+        header.extend(['task', 'start', 'dur'])
+
+    job_sol = {}
+    for j in range(data.num_jobs):
+        job_sol[j] = [j]
+        for i in range(data.num_machines):
+            job_sol[j].extend(list(solution[j, i]))
+
+    with open(solution_file_path, 'w') as f:
+        f.write('#Number of jobs: ' + str(data.num_jobs) + '\n')
+        f.write('#Number of machines: ' + str(data.num_machines) + '\n')
+        f.write('#Completion time: ' + str(
+            completion) + '\n\n')
+
+        f.write(main_header)
+        f.write("\n")
+        f.write(tabulate([header, *[v for l, v in job_sol.items()]],
+                         headers="firstrow"))
+
+    f.close()
+    print(" \n" + "=" * 55 + "SCHEDULING RESULTS" + "=" * 55)
+    f = open(solution_file_path, "r")
+    print(f.read())
+    f.close
+
+    print(f'Saved schedule to '
+          f'{os.path.join(os.getcwd(), solution_file_path)}')
+
+
+def write_solution_to_file_1(data, solution: dict, completion: int,
+                             solution_file_path: str) -> None:
+    """Write solution to a file.
+
+    Args:
+        data: a class containing JSS data
+        solution: a dictionary containing solution
+        completion: completion time or objective function of the the JSS problem
+        solution_file_path: path to the output solution file. If doesn't exist
+                                a new file is created
+
+    """
+
     with open(solution_file_path, 'w') as f:
         f.write('#Number of jobs: ' + str(data.num_jobs) + '\n')
         f.write('#Number of machines: ' + str(data.num_machines) + '\n')
@@ -107,4 +155,3 @@ def write_solution_to_file(data, solution: dict, completion: int,
 
         print(f'Saved schedule to '
               f'{os.path.join(os.getcwd(), solution_file_path)}')
-

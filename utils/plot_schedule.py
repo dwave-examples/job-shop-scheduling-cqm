@@ -24,7 +24,7 @@ def plot_solution(data, solution: dict, location: str = None) -> tuple:
     job_start_time = defaultdict(list)
     processing_time = defaultdict(list)
     for j in range(data.num_jobs):
-        job_start_time[j] = [solution[(j, i)] for i in
+        job_start_time[j] = [solution[(j, i)][1] for i in
                              range(data.num_machines)]
         processing_time[j] = [
             data.task_duration[j, data.machine_task[(j, i)]] for i in
@@ -52,12 +52,12 @@ def read_solution(path: str) -> tuple:
         f.readline()
         k = -1
         for i, line in enumerate(f):
-            if '#' in line[0] or len(line) <= 2:
+            if i < 6:
                 continue
             k += 1
-            lint = list(map(int, line.split()))
-            job_start_time[k] = lint[::2]
-            processing_time[k] = lint[1::2]
+            lint = list(map(int, line.split()))[1:]
+            job_start_time[k] = lint[1::3]
+            processing_time[k] = lint[2::3]
 
     return job_start_time, processing_time
 
