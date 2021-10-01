@@ -115,12 +115,7 @@ of the JSS
 
 ### Objective
 
-Our objective is to minimize the make-span of the given JSS problem and is simply 
-stated as:
-
-```
-minimize w
-```
+Our objective is to minimize the make-span (`w`) of the given JSS problem.
 
 ### Constraints
 #### Precedence Constraint

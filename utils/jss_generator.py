@@ -7,7 +7,7 @@ import argparse
 
 
 def generate_random_jss(n_jobs: int, n_machine: int, max_operation_time: int,
-                        location: str) -> dict:
+                        location: str) -> None:
     """Generate random job shop problems
 
     Args:
@@ -15,8 +15,7 @@ def generate_random_jss(n_jobs: int, n_machine: int, max_operation_time: int,
         n_machine: number of machines
         max_operation_time: maximum operation time
         location: path to the generated file
-    returns:
-        job_dict:
+
     """
 
     job_dict = defaultdict(list)
@@ -40,8 +39,6 @@ def generate_random_jss(n_jobs: int, n_machine: int, max_operation_time: int,
 
         f.close()
 
-    return job_dict
-
 
 if __name__ == "__main__":
     # Instantiate the parser
@@ -60,4 +57,4 @@ if __name__ == "__main__":
     num_machines = args.m
     duration = args.d
     location = args.path
-    jobs = generate_random_jss(num_jobs, num_machines, duration, location)
+    generate_random_jss(num_jobs, num_machines, duration, location)

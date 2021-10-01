@@ -1,10 +1,25 @@
 import unittest
+import os
+import sys
+import subprocess
 
 from dimod import sym, BINARY, INTEGER
 
 from job_shop_scheduler import JSSCQM
 from data import Data
 import utils.plot_schedule as job_plotter
+
+
+project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+class TestSmoke(unittest.TestCase):
+    @unittest.skipIf(os.getenv('SKIP_INT_TESTS'), "Skipping integration test.")
+    def test_smoke(self):
+        """Run job_shop_scheduler.py and check that nothing crashes"""
+
+        demo_file = os.path.join(project_dir, 'job_shop_scheduler.py')
+        subprocess.check_output([sys.executable, demo_file])
 
 
 class TestData(unittest.TestCase):
@@ -76,7 +91,3 @@ class TestData(unittest.TestCase):
             constraint.sense is sym.Sense.Ge for constraint in
             cqm.constraints.values())
         self.assertEqual(num_ge_inequality_constraints, 18)
-
-
-if __name__ == '__main__':
-    unittest.main()
