@@ -1,8 +1,8 @@
 import os
 import random
-import re
 from collections import defaultdict
 
+from tabulate import tabulate
 import argparse
 
 
@@ -22,18 +22,38 @@ def generate_random_jss(n_jobs: int, n_machine: int, max_operation_time: int,
     machines = list(range(n_machine))
     for i in range(n_jobs):
         random.shuffle(machines)
-        job_dict[i + 1] = [(m, random.randint(0, max_operation_time))
-                           for m in machines]
-    filename = location + '/' + 'instance' + str(n_jobs) + '_' + str(n_machine) + '.txt'
+        job_dict[i] = [(task, m, random.randint(0, max_operation_time))
+                       for task, m in enumerate(machines)]
+    filename = location + '/' + 'instance' + \
+               str(n_jobs) + '_' + str(n_machine) + '.txt'
+
     print(filename)
     if os.path.exists(filename):
         print(filename, "already exist.")
     else:
+        task_header = " " * 10
+        for i in range(n_machine):
+            task_header += " " * 6 + f'task {i}' + " " * 6
+
+        header = ["job id"]
+        for i in range(n_machine):
+            header.extend(['machine', 'dur'])
+
+        tasks_info = {j: [j] for j in range(n_jobs)}
+        for j, v in job_dict.items():
+            for k in v:
+                tasks_info[j].extend(k[1:])
+
+
         with open(filename, 'w') as f:
-            f.write(str(n_jobs) + '\t' + str(n_machine) + '\n')
-            for i in job_dict:
-                f.write(re.sub('[^A-Za-z0-9]+', '\t',
-                               str(job_dict[i])).strip() + '\n')
+            f.write(f'#Num of jobs: {n_jobs} \n')
+            f.write(f'#Num of machines: {n_machine} \n')
+            f.write(task_header)
+            f.write('\n')
+            f.write(tabulate([header, *[v for l, v in tasks_info.items()]],
+                             headers="firstrow"))
+            f.write('\n')
+
         print(f'Saved schedule to '
               f'{os.path.join(os.getcwd(), filename)}')
 

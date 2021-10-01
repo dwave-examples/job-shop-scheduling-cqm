@@ -66,13 +66,22 @@ def read_instance(instance_path: str) -> dict:
     job_dict = defaultdict(list)
 
     with open(instance_path) as f:
-        f.readline()
         for i, line in enumerate(f):
-            lint = list(map(int, line.split()))
-            job_dict[i] = [x for x in
-                           zip(lint[::2],  # machines
-                               lint[1::2]  # operation lengths
-                               )]
+            if i == 0:
+                num_jobs = int(line.split()[-1])
+            elif i == 1:
+                num_machines = int(line.split()[-1])
+            elif 2 <= i <= 4:
+                continue
+            else:
+                job_task = list(map(int, line.split()))
+                job_dict[i - 5] = [x for x in
+                                   zip(job_task[1::2],  # machines
+                                       job_task[2::2]  # processing duration
+                                       )]
+        assert (len(job_dict) == num_jobs)
+        assert (len(job_dict[0]) == num_machines)
+
         return job_dict
 
 
@@ -106,8 +115,7 @@ def write_solution_to_file(data, solution: dict, completion: int,
     with open(solution_file_path, 'w') as f:
         f.write('#Number of jobs: ' + str(data.num_jobs) + '\n')
         f.write('#Number of machines: ' + str(data.num_machines) + '\n')
-        f.write('#Completion time: ' + str(
-            completion) + '\n\n')
+        f.write('#Completion time: ' + str(completion) + '\n\n')
 
         f.write(main_header)
         f.write("\n")

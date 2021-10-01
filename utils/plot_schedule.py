@@ -76,11 +76,11 @@ def plot_schedule_core(job_start_time: dict, processing_time: dict,
     solsT = sols.transpose()
     dursT = durs.transpose()
     n, m = sols.shape
-    labels = ['machine' + str(i) for i in range(n)]
-    category_names = ['job' + str(i) for i in range(m)]
+    labels = ['machine ' + str(i) for i in range(m)]
+    category_names = ['job ' + str(i) for i in range(n)]
 
     category_colors = plt.get_cmap('RdYlGn')(
-        np.linspace(0.15, 0.85, sols.shape[1]))
+        np.linspace(0.15, 0.85, sols.shape[0]))
     fig, ax = plt.subplots()
     ax.invert_yaxis()
     ax.xaxis.set_visible(True)

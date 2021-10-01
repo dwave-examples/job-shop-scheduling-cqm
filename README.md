@@ -32,19 +32,24 @@ under the [Problem generator](#Generating-Problem-Instances) section.
 
 This is an example of a JSS input instance file for a 5 * 5 problem: 
 ```
-5   5
-2   4   1   3   0   3   4   2   3   3
-4   2   2   1   3   0   1   4   0   2
-3   5   4   0   1   5   2   2   0   3
-2   2   1   4   4   5   3   1   0   4
-2   0   1   4   4   0   0   0   3   5
+#Num of jobs: 5 
+#Num of machines: 5 
+                task 0            task 1            task 2            task 3            task 4      
+  job id    machine    dur    machine    dur    machine    dur    machine    dur    machine    dur
+--------  ---------  -----  ---------  -----  ---------  -----  ---------  -----  ---------  -----
+       0          1      3          3      4          4      4          0      5          2      1
+       1          3      4          2      0          1      0          0      1          4      0
+       2          1      5          4      5          2      4          0      0          3      3
+       3          4      1          3      4          0      2          2      0          1      2
+       4          1      3          3      3          0      0          2      0          4      1
+
 ```
 
-where the first row represents the number of jobs and machines, respectively. 
-Each row after represents a job. Every two columns represents one task and 
-should be read sequentially. A number in an odd column represents the machine 
-required for the task and a number in an even column represents the task's 
-processing duration. 
+where the first and second row represent the number of jobs and machines, respectively. 
+The jobs should be executed sequentially according to the given task in the third row. 
+Each task uses a specific machine with a given duration (`dur`). 
+Note that, there are some tasks with zero processing duration, 
+which means those tasks won't be executed. 
 
 These additional parameters can be passed to `job_shop_scheduler.py`:
 
@@ -58,15 +63,18 @@ These additional parameters can be passed to `job_shop_scheduler.py`:
 The program produces a solution schedule like this:
 
 ```
+#Number of jobs: 5
+#Number of machines: 5
+#Completion time: 23.0
+
                   machine 0               machine 1               machine 2               machine 3               machine 4       
   job id    task    start    dur    task    start    dur    task    start    dur    task    start    dur    task    start    dur
 --------  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----
-       0       2       11      3       1        8      3       0        3      4       4       20      3       3       17      2
-       1       4       21      2       2       16      4       3       13      1       1       14      0       0        4      2
-       2       3       18      3       4       11      5       1       16      2       2        3      5       0        8      0
-       3       2       14      4       1        4      4       4        0      2       3       13      1       0        8      5
-       4       2        8      0       1        0      4       4        0      0       0       14      5       3        6      0
-
+       0       1       17      5       3        6      3       4       22      1       0        9      4       2       13      4
+       1       3        9      1       2        6      0       1        6      0       0        1      4       4       20      0
+       2       1       16      0       4        1      5       2       11      4       0       20      3       3        6      5
+       3       4       12      2       3       21      2       0       15      0       2        5      4       1        3      1
+       4       1       17      0       3       10      3       0       18      0       2       14      3       4       20      1
 ```
 
 The following graphic is an illustration of this solution. 
