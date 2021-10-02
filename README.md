@@ -45,11 +45,14 @@ This is an example of a JSS input instance file for a 5 * 5 problem:
 
 ```
 
-where the first and second row represent the number of jobs and machines, respectively. 
-The jobs should be executed sequentially according to the given task in the third row. 
-Each task uses a specific machine with a given duration (`dur`). 
-Note that, there are some tasks with zero processing duration, 
-which means those tasks won't be executed. 
+Note that:
+- tasks must be executed sequentially;
+- `dur` refers to the processing duration of a task;
+- when duration is 0 for a task, the task will not be executed;
+- this demo solves a variant of job-shop-scheduling problem,
+ which enforces a one-to-one relationship between tasks and machines, therefore,
+the number of tasks per job is always equal to the number of machines in the problem.
+
 
 These additional parameters can be passed to `job_shop_scheduler.py`:
 
@@ -107,7 +110,7 @@ These are the parameters of the problem:
 - `m` : is the number of machines
 - `J` : is the set of jobs (`{0,1,2,...,n}`)
 - `M` : is the set of machines (`{0,1,2,...,m}`)
-- `T` : is the set of tasks (`{0,1,2,...,m}`) that has same dimension as `M`
+- `T` : is the set of tasks (`{0,1,2,...,m}`) that has same dimension as `M`. 
 - `M_(j,t)`:  is the machine that processes task `t` of job `j`
 - `T_(j,i)`  : is the task that is processed by machine `i` for job `j` 
 - `D_(j,t)`:  is the processing duration that task `t` needs for job `j`
@@ -129,7 +132,7 @@ Our objective is to minimize the make-span (`w`) of the given JSS problem.
 #### Precedence Constraint
 
 Our first constraint, [equation 1](#eq2), enforces the precedence constraint.
-This ensures that all operations of a job are executed in the given order.
+This ensures that all tasks of a job are executed in the given order.
 
 ![equation1](_static/eq1.png)          (1)
 

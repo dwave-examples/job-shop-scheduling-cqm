@@ -19,7 +19,7 @@ class JSSCQM():
         self.x = {}
         self.y = {}
         self.makespan = {}
-        self.best_feasible_sample = {}
+        self.best_sample = {}
         self.solution = {}
         self.completion_time = 0
 
@@ -116,27 +116,28 @@ class JSSCQM():
         """
 
         sampler = LeapHybridCQMSampler()
-        raw_sampleset = sampler.sample_cqm(self.cqm,
-                                           time_limit=time_limit)
+        raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit)
+        feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
+        num_feasible = len(feasible_sampleset)
+        if num_feasible > 0:
+            best_samples = \
+                feasible_sampleset.truncate(min(5, num_feasible))
+        else:
+            raise Warning("Did not find feasible solution")
+            best_samples = feasible_sampleset.truncate(5)
 
-        feasible_sols = raw_sampleset.record[raw_sampleset.record.is_feasible]
-        if len(feasible_sols):
-            feasible_samples = \
-                SampleSet(feasible_sols,
-                          raw_sampleset.variables,
-                          raw_sampleset.info,
-                          raw_sampleset.vartype)
+        print(" \n" + "=" * 30 + "BEST SAMPLE SET" + "=" * 30)
+        print(best_samples)
 
-        self.best_feasible_sample = feasible_samples.first.sample
-        print(" \n" + "=" * 30 + "FEASIBLE SAMPLE SET" + "=" * 30)
-        print(feasible_samples)
+        self.best_sample = best_samples.first.sample
+
         self.solution = {
             (j, i): (data.task_machine[(j, i)],
-                self.best_feasible_sample[self.x[(j, i)].variables[0]],
-                data.task_duration[(j, data.machine_task[(j, i)])])
+                     self.best_sample[self.x[(j, i)].variables[0]],
+                     data.task_duration[(j, data.machine_task[(j, i)])])
             for i in range(data.num_machines) for j in range(data.num_jobs)}
-        self.completion_time = self.best_feasible_sample['makespan']
-        print(self.solution)
+
+        self.completion_time = self.best_sample['makespan']
 
 
 if __name__ == "__main__":
