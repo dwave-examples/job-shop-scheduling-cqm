@@ -1,7 +1,8 @@
 from time import time
+import warnings
+
 from tabulate import tabulate
 import argparse
-
 from dimod import ConstrainedQuadraticModel, Binary, Integer, SampleSet
 from dwave.system import LeapHybridCQMSampler
 
@@ -123,8 +124,8 @@ class JSSCQM():
             best_samples = \
                 feasible_sampleset.truncate(min(5, num_feasible))
         else:
-            raise Warning("Did not find feasible solution")
-            best_samples = feasible_sampleset.truncate(5)
+            warnings.warn("Warning: Did not find feasible solution")
+            best_samples = raw_sampleset.truncate(5)
 
         print(" \n" + "=" * 30 + "BEST SAMPLE SET" + "=" * 30)
         print(best_samples)
