@@ -12,8 +12,7 @@ from data import Data
 
 
 class JSSCQM():
-    """Builds and solves a Job Shop Scheduling problem using CQM.
-    """
+    """Builds and solves a Job Shop Scheduling problem using CQM."""
 
     def __init__(self):
         self.cqm = None
@@ -25,12 +24,13 @@ class JSSCQM():
         self.completion_time = 0
 
     def define_cqm_model(self):
-        """Define CQM model"""
+        """Define CQM model."""
 
         self.cqm = ConstrainedQuadraticModel()
 
     def define_variables(self, data):
-        """Define CQM variables
+        """Define CQM variables.
+
         Args:
             data: a JSS data class
         """
@@ -54,11 +54,13 @@ class JSSCQM():
 
     def define_objective_function(self):
         """Define objective function"""
+
         self.cqm.set_objective(self.makespan)
 
     def add_precedence_constraints(self, data):
         """Precedence constraints ensures that all operations of a job are
         executed in the given order.
+
         Args:
             data: a JSS data class
         """
@@ -75,6 +77,7 @@ class JSSCQM():
     def add_quadratic_overlap_constraint(self, data):
         """Add quadratic constraints to ensure that no two jobs can be scheduled
          on the same machine at the same time.
+
          Args:
              data: JSS data class
         """
@@ -98,6 +101,7 @@ class JSSCQM():
     def add_makespan_constraint(self, data):
         """Ensures that the make span is at least the largest completion time of
         the last operation of all jobs.
+
         Args:
             data: JSS data class
         """
@@ -109,11 +113,11 @@ class JSSCQM():
                 label='makespan_ctr{}'.format(j))
 
     def call_cqm_solver(self, time_limit, data):
-        """Calls CQM solver
+        """Calls CQM solver.
+
         Args:
             time_limit: time limit in second
             data: a JSS data class
-
         """
 
         sampler = LeapHybridCQMSampler()
@@ -142,8 +146,7 @@ class JSSCQM():
 
 
 if __name__ == "__main__":
-    """Modeling and solving Job Shop Scheduling using CQM solver.
-    """
+    """Modeling and solving Job Shop Scheduling using CQM solver."""
 
     # Start the timer
     start_time = time()
