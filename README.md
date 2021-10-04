@@ -1,3 +1,7 @@
+[![Linux/Mac/Windows build status](
+  https://circleci.com/gh/dwave-examples/job-shop-scheduling-cqm.svg?style=svg)](
+  https://circleci.com/gh/dwave-examples/job-shop-scheduling-cqm)
+
 # Job Shop Scheduling using CQM
 
 [Job shop scheduling](https://en.wikipedia.org/wiki/Job-shop_scheduling) is an
@@ -30,7 +34,8 @@ There are several instances under `input` folder. Alternatively, a random
 instance file could be generated using `utils/jss_generator.py` as discussed 
 under the [Problem generator](#Generating-Problem-Instances) section.
 
-This is an example of a JSS input instance file for a 5 * 5 problem: 
+This is an example of a JSS input instance file for a 5 * 5 problem:
+
 ```
 #Num of jobs: 5 
 #Num of machines: 5 
@@ -46,13 +51,13 @@ This is an example of a JSS input instance file for a 5 * 5 problem:
 ```
 
 Note that:
+
 - tasks must be executed sequentially;
 - `dur` refers to the processing duration of a task;
 - when duration is 0 for a task, the task will not be executed;
 - this demo solves a variant of job-shop-scheduling problem,
  which enforces a one-to-one relationship between tasks and machines, therefore,
 the number of tasks per job is always equal to the number of machines in the problem.
-
 
 These additional parameters can be passed to `job_shop_scheduler.py`:
 
@@ -61,7 +66,6 @@ These additional parameters can be passed to `job_shop_scheduler.py`:
     -tl TL              time limit in seconds (default: None)
     -os OS              path to the output solution file (default: solution.txt)
     -op OP              path to the output plot file (default: shcedule.png)
-
 
 The program produces a solution schedule like this:
 
@@ -80,11 +84,9 @@ The program produces a solution schedule like this:
        4       1       17      0       3       10      3       0       18      0       2       14      3       4       20      1
 ```
 
-The following graphic is an illustration of this solution. 
-
+The following graphic is an illustration of this solution.
 
 ![Example Solution](_static/schedule.png)
-
 
 ### Generating Problem Instances
 
@@ -98,13 +100,11 @@ To see a full description of the options, type:
 
 `python utils/jss_generator.py -h`
 
-
 ## Model and Code Overview
 
 ### Problem Parameters
 
 These are the parameters of the problem:
-
 
 - `n` : is the number of jobs
 - `m` : is the number of machines
@@ -142,7 +142,7 @@ tasks 4 and 5 of job 3 that run on machine 6 and 1, respectively,
 assuming that task 4 takes 12 hours to finish, we add this constraint:
 `x_3_6 >= x_3_1 + 12`
 
-#### No-Overlap constraints
+#### No-Overlap Constraints
 Our second constraint, [equation 2](#eq2), ensures that multiple jobs don't use any machine at the same time. 
 ![eq2](_static/eq2.png)          (2)
 
@@ -163,7 +163,6 @@ There are two cases:
   Since these equations are applied to every pair of jobs,
   they guarantee that the jobs don't overlap on a machine.
 
-
 #### Make-Span Constraint 
 The make-span of a JSS problem can be calculated by obtaining the maximum 
 completion time for the last task of all jobs. This can be obtained using 
@@ -177,12 +176,10 @@ the inequality constraint of [equation3](#eq3)
 A. S. Manne, On the job-shop scheduling problem, Operations Research , 1960, 
 Pages 219-223.
 
-
 <a id="Ku"></a>
 Wen-Yang Ku, J. Christopher Beck, Mixed Integer Programming models for job 
 shop scheduling: A computational analysis, Computers & Operations Research,
 Volume 73, 2016, Pages 165-173.
-
 
 ## License
 
