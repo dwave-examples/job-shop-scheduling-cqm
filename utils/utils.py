@@ -123,12 +123,8 @@ def write_solution_to_file(data, solution: dict, completion: int,
                          headers="firstrow"))
 
     f.close()
-    print(" \n" + "=" * 55 + "SCHEDULING RESULTS" + "=" * 55)
-    f = open(solution_file_path, "r")
-    print(f.read())
-    f.close
 
-    print(f'Saved schedule to '
+    print(f'\nSaved schedule to '
           f'{os.path.join(os.getcwd(), solution_file_path)}')
 
 

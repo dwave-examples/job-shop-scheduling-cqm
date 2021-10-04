@@ -122,10 +122,10 @@ class JSSCQM():
         num_feasible = len(feasible_sampleset)
         if num_feasible > 0:
             best_samples = \
-                feasible_sampleset.truncate(min(5, num_feasible))
+                feasible_sampleset.truncate(min(10, num_feasible))
         else:
             warnings.warn("Warning: Did not find feasible solution")
-            best_samples = raw_sampleset.truncate(5)
+            best_samples = raw_sampleset.truncate(10)
 
         print(" \n" + "=" * 30 + "BEST SAMPLE SET" + "=" * 30)
         print(best_samples)
