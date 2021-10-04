@@ -1,5 +1,4 @@
 dwave-ocean-sdk>=4.1
-dimod~=0.10.6
 numpy~=1.19.4
 matplotlib~=3.4.3
 tabulate==0.8.9

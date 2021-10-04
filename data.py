@@ -2,8 +2,7 @@ from utils.utils import read_instance
 
 
 class Data:
-    """A class that reads and prepares data for the job shop scheduling problem.
-    """
+    """A class that reads and prepares data for the job shop scheduling problem."""
 
     def __init__(self, input_file):
         self.num_jobs = 0
