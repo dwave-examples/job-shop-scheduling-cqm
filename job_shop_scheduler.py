@@ -88,15 +88,17 @@ class JSSCQM():
                     for i in range(data.num_machines):
                         task_k = data.machine_task[(k, i)]
                         task_j = data.machine_task[(j, i)]
-                        self.cqm.add_constraint(
-                            self.x[(j, i)] - self.x[(k, i)] +
-                            (data.task_duration[k, task_k] - data.task_duration[
-                                j, task_j]) * self.y[
-                                (j, k, i)]
-                            + 2 * self.y[(j, k, i)] * (
-                                    self.x[(k, i)] - self.x[(j, i)]) >=
-                            data.task_duration[(k, task_k)],
-                            label='OneJobj{}_j{}_m{}'.format(j, k, i))
+                        if data.task_duration[k, task_k] > 0 and\
+                                data.task_duration[j, task_j] > 0:
+                            self.cqm.add_constraint(
+                                self.x[(j, i)] - self.x[(k, i)] + (
+                                        data.task_duration[k, task_k] -
+                                        data.task_duration[
+                                            j, task_j]) * self.y[
+                                    (j, k, i)] + 2 * self.y[(j, k, i)] * (
+                                        self.x[(k, i)] - self.x[(j, i)]) >=
+                                data.task_duration[(k, task_k)],
+                                label='OneJobj{}_j{}_m{}'.format(j, k, i))
 
     def add_makespan_constraint(self, data):
         """Ensures that the make span is at least the largest completion time of

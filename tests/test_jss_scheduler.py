@@ -70,7 +70,7 @@ class TestData(unittest.TestCase):
         model.define_objective_function()
         cqm = model.cqm
         num_binaries = sum(cqm.vartype(v) is BINARY for v in cqm.variables)
-        self.assertEqual(num_binaries, 9)
+        self.assertEqual(num_binaries, 7)
         num_integers = sum(cqm.vartype(v) is INTEGER for v in cqm.variables)
         self.assertEqual(num_integers, 10)
         num_linear_constraints = sum(
@@ -80,11 +80,11 @@ class TestData(unittest.TestCase):
         num_quadratic_constraints = sum(
             not constraint.lhs.is_linear() for constraint in
             cqm.constraints.values())
-        self.assertEqual(num_quadratic_constraints, 9)
+        self.assertEqual(num_quadratic_constraints, 7)
         num_ge_inequality_constraints = sum(
             constraint.sense is sym.Sense.Ge for constraint in
             cqm.constraints.values())
-        self.assertEqual(num_ge_inequality_constraints, 18)
+        self.assertEqual(num_ge_inequality_constraints, 16)
 
 
 class CQM_model(unittest.TestCase):
@@ -101,14 +101,14 @@ class CQM_model(unittest.TestCase):
         expected_violations = {
             'pj0_m1': -0.0, 'pj0_m2': -3.0, 'pj1_m1': -2.0,
             'pj1_m2': -2.0,
-            'pj2_m1': -3.0, 'pj2_m2': -1.0, 'OneJobj0_j1_m0': -2.0,
+            'pj2_m1': -3.0, 'pj2_m2': -1.0,
+            'OneJobj0_j1_m0': -2.0,
             'OneJobj0_j1_m1': -3.0, 'OneJobj0_j1_m2': -3.0,
-            'OneJobj0_j2_m0': -8.0,
             'OneJobj0_j2_m1': -5.0, 'OneJobj0_j2_m2': -7.0,
-            'OneJobj1_j2_m0': -3.0,
             'OneJobj1_j2_m1': -0.0, 'OneJobj1_j2_m2': -2.0,
-            'makespan_ctr0': -8.0,
-            'makespan_ctr1': -3.0, 'makespan_ctr2': -0.0}
+            'makespan_ctr0': -8.0, 'makespan_ctr1': -3.0,
+            'makespan_ctr2': -0.0
+        }
 
         input_file = "tests/instance_test.txt"
         test_data = Data(input_file)
@@ -137,8 +137,7 @@ class CQM_model(unittest.TestCase):
             'pj0_m1': -4.0, 'pj0_m2': 1.0, 'pj1_m1': -2.0, 'pj1_m2': -2.0,
             'pj2_m1': -3.0, 'pj2_m2': -1.0, 'OneJobj0_j1_m0': -2.0,
             'OneJobj0_j1_m1': -3.0, 'OneJobj0_j1_m2': 1.0,
-            'OneJobj0_j2_m0': -8.0, 'OneJobj0_j2_m1': -5.0,
-            'OneJobj0_j2_m2': -3.0, 'OneJobj1_j2_m0': -3.0,
+            'OneJobj0_j2_m1': -5.0, 'OneJobj0_j2_m2': -3.0,
             'OneJobj1_j2_m1': -0.0, 'OneJobj1_j2_m2': -2.0,
             'makespan_ctr0': -8.0, 'makespan_ctr1': -3.0,
             'makespan_ctr2': -0.0}

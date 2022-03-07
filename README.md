@@ -72,16 +72,16 @@ The program produces a solution schedule like this:
 ```
 #Number of jobs: 5
 #Number of machines: 5
-#Completion time: 23.0
+#Completion time: 22.0
 
                   machine 0               machine 1               machine 2               machine 3               machine 4       
   job id    task    start    dur    task    start    dur    task    start    dur    task    start    dur    task    start    dur
 --------  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----
-       0       1       17      5       3        6      3       4       22      1       0        9      4       2       13      4
-       1       3        9      1       2        6      0       1        6      0       0        1      4       4       20      0
-       2       1       16      0       4        1      5       2       11      4       0       20      3       3        6      5
-       3       4       12      2       3       21      2       0       15      0       2        5      4       1        3      1
-       4       1       17      0       3       10      3       0       18      0       2       14      3       4       20      1
+       0       1       16      5       3        5      3       4       21      1       0        8      4       2       12      4
+       1       3       21      1       2       14      0       1        9      0       0        0      4       4       22      0
+       2       1       16      0       4        0      5       2       12      4       0       18      3       3        5      5
+       3       4        9      2       3       20      2       0       14      0       2        4      4       1        0      1
+       4       1       17      0       3        9      3       0       20      0       2       14      3       4       21      1
 ```
 
 The following graphic is an illustration of this solution.
