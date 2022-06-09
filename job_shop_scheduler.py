@@ -139,7 +139,7 @@ class JSSCQM():
         self.best_sample = best_samples.first.sample
 
         self.solution = {
-            (j, i): (data.task_machine[(j, i)],
+            (j, i): (data.machine_task[(j, i)],
                      self.best_sample[self.x[(j, i)].variables[0]],
                      data.task_duration[(j, data.machine_task[(j, i)])])
             for i in range(data.num_machines) for j in range(data.num_jobs)}
