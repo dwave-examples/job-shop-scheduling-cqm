@@ -126,36 +126,3 @@ def write_solution_to_file(data, solution: dict, completion: int,
 
     print(f'\nSaved schedule to '
           f'{os.path.join(os.getcwd(), solution_file_path)}')
-
-
-def write_solution_to_file_1(data, solution: dict, completion: int,
-                             solution_file_path: str) -> None:
-    """Write solution to a file.
-
-    Args:
-        data: a class containing JSS data
-        solution: a dictionary containing solution
-        completion: completion time or objective function of the the JSS problem
-        solution_file_path: path to the output solution file. If doesn't exist
-                                a new file is created
-
-    """
-
-    with open(solution_file_path, 'w') as f:
-        f.write('#Number of jobs: ' + str(data.num_jobs) + '\n')
-        f.write('#Number of machines: ' + str(data.num_machines) + '\n')
-        f.write('#Completion time: ' + str(
-            completion) + '\n\n')
-        f.write('#' + '_' * 150 + '\n')
-
-        for j in range(data.num_jobs):
-            print()
-            f.write('   '.
-                    join([str(int(solution[(j, i)])) + '   ' +
-                          str(data.task_duration[
-                                  (j, data.machine_task[(j, i)])])
-                          for i in range(data.num_machines)]) + '\n')
-        f.close()
-
-        print(f'Saved schedule to '
-              f'{os.path.join(os.getcwd(), solution_file_path)}')

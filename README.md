@@ -77,11 +77,11 @@ The program produces a solution schedule like this:
                   machine 0               machine 1               machine 2               machine 3               machine 4       
   job id    task    start    dur    task    start    dur    task    start    dur    task    start    dur    task    start    dur
 --------  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----  ------  -------  -----
-       0       1       16      5       3        5      3       4       21      1       0        8      4       2       12      4
-       1       3       21      1       2       14      0       1        9      0       0        0      4       4       22      0
-       2       1       16      0       4        0      5       2       12      4       0       18      3       3        5      5
-       3       4        9      2       3       20      2       0       14      0       2        4      4       1        0      1
-       4       1       17      0       3        9      3       0       20      0       2       14      3       4       21      1
+       0       3       16      5       0        5      3       4       21      1       1        8      4       2       12      4
+       1       3        6      1       2        5      0       1        4      0       0        0      4       4        9      0
+       2       3       17      0       0        0      5       2       13      4       4       17      3       1        6      5
+       3       2        9      2       4       19      2       3       14      0       1        4      4       0        1      1
+       4       2       18      0       0        9      3       3       21      0       1       14      3       4       21      1
 ```
 
 The following graphic is an illustration of this solution.
