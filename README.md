@@ -1,5 +1,8 @@
+[![Open in Leap IDE](
+  https://cdn-assets.cloud.dwavesys.com/shared/latest/badges/leapide.svg)](
+  https://ide.dwavesys.io/#https://github.com/dwave-examples/job-shop-scheduling-cqm)
 [![Linux/Mac/Windows build status](
-  https://circleci.com/gh/dwave-examples/job-shop-scheduling-cqm.svg?style=svg)](
+  https://circleci.com/gh/dwave-examples/job-shop-scheduling-cqm.svg?style=shield)](
   https://circleci.com/gh/dwave-examples/job-shop-scheduling-cqm)
 
 # Job Shop Scheduling using CQM
