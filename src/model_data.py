@@ -193,6 +193,28 @@ class JobShopData:
             raise ValueError(f"Job {task.job} not in dataset")
 
         return self._job_tasks[task.job].index(task)
+    
+
+    def get_resource_job_tasks(self, resource: str, job: str) -> Task:
+        """Returns the tasks in a job that require a given resource.
+
+        Args:
+            resource (str): the resource to be checked
+            job (str): the job to be checked
+        
+        Returns:
+            Task: the tasks in the job that require the given resource
+
+        Raises:
+            ValueError: if the resource or job is not in the dataset
+        """
+        if resource not in self._resources:
+            raise ValueError(f"Resource {resource} not in dataset")
+
+        if job not in self._jobs:
+            raise ValueError(f"Job {job} not in dataset")
+
+        return [task for task in self._job_tasks[job] if task.resource == resource][0]
 
 
     def get_total_job_time(self, job: str) -> int:
