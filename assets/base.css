@@ -1,36 +1,34 @@
-/* Table of contents
-––––––––––––––––––––––––––––––––––––––––––––––––––
-- Plotly.js
-- Grid
-- Base Styles
-- Typography
-- Links
-- Buttons
-- Forms
-- Lists
-- Code
-- Tables
-- Spacing
-- Utilities
-- Clearing
-- Media Queries
+/* 
+This file is copied from apps/dash-clinical-analytics/assets/base.css under the following license
+
+MIT License
+
+Copyright (c) 2019 Plotly
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Modifications are licensed under
+
+Apache License, Version 2.0
+(see ./LICENSE for details)
+
 */
-
-/* PLotly.js
-–––––––––––––––––––––––––––––––––––––––––––––––––– */
-/* plotly.js's modebar's z-index is 1001 by default
- * https://github.com/plotly/plotly.js/blob/7e4d8ab164258f6bd48be56589dacd9bdd7fded2/src/css/_modebar.scss#L5
- * In case a dropdown is above the graph, the dropdown's options
- * will be rendered below the modebar
- * Increase the select option's z-index
- */
-
-/* This was actually not quite right -
-   dropdowns were overlapping each other (edited October 26)
-
-.Select {
-    z-index: 1002;
-}*/
 
 /* Grid
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
