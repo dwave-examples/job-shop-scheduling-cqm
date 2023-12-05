@@ -85,7 +85,7 @@ def read_instance(instance_path: str) -> dict:
         return job_dict
 
 
-def write_solution_to_file(data, solution: dict, completion: int,
+def write_solution_to_file(model_data, solution: dict, completion: int,
                            solution_file_path: str) -> None:
     """Write solution to a file.
 
@@ -99,22 +99,22 @@ def write_solution_to_file(data, solution: dict, completion: int,
     """
 
     main_header = " " * 10
-    for i in range(data.num_machines):
+    for i in model_data.resources:
         main_header += " " * 8 + f'machine {i}' + " " * 7
 
     header = ['job id']
-    for i in range(data.num_machines):
+    for i in model_data.resources:
         header.extend(['task', 'start', 'dur'])
 
     job_sol = {}
-    for j in range(data.num_jobs):
+    for j in model_data.jobs:
         job_sol[j] = [j]
-        for i in range(data.num_machines):
+        for i in model_data.resources:
             job_sol[j].extend(list(solution[j, i]))
 
     with open(solution_file_path, 'w') as f:
-        f.write('#Number of jobs: ' + str(data.num_jobs) + '\n')
-        f.write('#Number of machines: ' + str(data.num_machines) + '\n')
+        f.write('#Number of jobs: ' + str(model_data.get_job_count()) + '\n')
+        f.write('#Number of machines: ' + str(model_data.get_resource_count()) + '\n')
         f.write('#Completion time: ' + str(completion) + '\n\n')
 
         f.write(main_header)
@@ -126,3 +126,53 @@ def write_solution_to_file(data, solution: dict, completion: int,
 
     print(f'\nSaved schedule to '
           f'{os.path.join(os.getcwd(), solution_file_path)}')
+
+
+def read_taillard_instance(instance_path: str) -> dict:
+    """A method that reads input instance file from the taillard
+    dataset
+
+    Args:
+        instance_path:  path to the job shop instance file
+
+    Returns:
+        Job_dict: dictionary containing jobs as keys and a list of tuple of
+                machines and their processing time as values.
+    """
+    job_dict = defaultdict(list)
+
+    with open(instance_path) as f:
+        #ignore the first line
+        f.readline()
+        #the second line contains Nb of jobs, Nb of Machines as first two values
+        line = f.readline()
+        num_jobs = int(line.split()[0])
+        num_machines = int(line.split()[1])
+
+        #ignore the next line
+        f.readline()
+
+        #the next lines contain the processing times for each job for each resource; read this in as
+        #as matrix until "Machine" is encountered
+        processing_times = []
+        line = f.readline()
+        while "Machine" not in line:
+            processing_times.append(list(map(int, line.split())))
+            line = f.readline()
+
+        #the next lines contain the machine order for each job; read this in as
+        #as matrix until a blank line is encountered
+        machine_order = []
+        line = f.readline()
+        while line != "\n" and line != '' and line is not None:
+            machine_order.append(list(map(int, line.split())))
+            line = f.readline()
+
+        for job in range(num_jobs):
+            for machine in range(num_machines):
+                job_dict[job].append((machine_order[job][machine], processing_times[job][machine]))
+
+        assert (len(job_dict) == num_jobs)
+        assert (len(job_dict[0]) == num_machines)
+
+        return job_dict

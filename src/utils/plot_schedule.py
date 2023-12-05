@@ -12,7 +12,7 @@ except ImportError:
     import matplotlib.pyplot as plt
 
 
-def plot_solution(data, solution: dict, location: str = None) -> tuple:
+def plot_solution(job_data, solution: dict, location: str = None) -> tuple:
     """Prepare Jss solution for plotting
 
     Args:
@@ -23,12 +23,11 @@ def plot_solution(data, solution: dict, location: str = None) -> tuple:
     """
     job_start_time = defaultdict(list)
     processing_time = defaultdict(list)
-    for j in range(data.num_jobs):
+    for j in job_data.jobs:
         job_start_time[j] = [solution[(j, i)][1] for i in
-                             range(data.num_machines)]
-        processing_time[j] = [
-            data.task_duration[j, data.machine_task[(j, i)]] for i in
-            range(data.num_machines)]
+                             job_data.resources]
+        processing_time[j] = [job_data.get_resource_job_tasks(i, j).duration
+                               for i in job_data.resources]
     if location is not None:
         plot_schedule_core(job_start_time, processing_time, location)
     return job_start_time, processing_time
