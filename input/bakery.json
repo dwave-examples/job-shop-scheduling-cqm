@@ -1,0 +1,12 @@
+{
+    "cupcakes": [{"resource": "mixer", "duration": 2}, {"resource": "oven", "duration": 1}],
+    "smoothie": [{"resource": "blender", "duration": 1}],
+    "lasagna": [{"resource": "oven", "duration": 2}],
+    "cookies": [{"resource": "mixer", "duration": 1}, {"resource": "oven", "duration": 3}],
+    "pizza": [{"resource": "oven", "duration": 2}],
+    "cake": [{"resource": "mixer", "duration": 3}, {"resource": "oven", "duration": 2}],
+    "pie": [{"resource": "oven", "duration": 2}],
+    "salad": [{"resource": "knife", "duration": 1}],
+    "sandwich": [{"resource": "knife", "duration": 1}],
+    "soup": [{"resource": "knife", "duration": 1}, {"resource": "pot", "duration": 6}]
+}

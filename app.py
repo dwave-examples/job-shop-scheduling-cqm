@@ -42,15 +42,16 @@ import pandas as pd
 from datetime import datetime as dt
 import pathlib
 
-from model_data import JobShopData
+from src.model_data import JobShopData
 from demo import run_job_shop_scheduler
 
 
 #built-in color scales at https://plotly.com/python/builtin-colorscales/y
 
 SCENARIOS = {
-    'Baking': 'bakery.json',
-    'Production': 'production.json',
+    '3x3': "instance3_3.txt",
+    '5x5': "instance5_5.txt",
+    '10x10': "instance10_10.txt"
 }
 
 app = dash.Dash(
@@ -65,7 +66,7 @@ app.config.suppress_callback_exceptions = True
 
 # Path
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
-DATA_PATH = BASE_PATH.joinpath("data").resolve()
+DATA_PATH = BASE_PATH.joinpath("input").resolve()
 
 
 model_data = JobShopData()
@@ -93,6 +94,8 @@ def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
             start_time = end_time
     df = pd.DataFrame(task_data)
     df['delta'] = df.Finish - df.Start
+    df['Task'] = df['Task'].astype(str)
+    df['Resource'] = df['Resource'].astype(str)
     return df
 
 
@@ -137,52 +140,24 @@ def generate_duration_slider(resource, min_value=1, max_value=5):
     )
 
 
-def generate_resource_dropdown(resources: list) -> html.Div:
-    """
-    :param resources: List of resources.
-    :return: A Div containing controls for resources.
-    """
-    resource_sliders = [generate_duration_slider(resource, 0, 5) for resource in resources]
-    return html.Div(
-        id="resource-dropdown-div",
-        children=[
-            html.P("Add Job"),
-            dcc.Dropdown(
-                id="resource-select",
-                options=[{"label": i, "value": i} for i in resources],
-                multi=True,
-            ),
-            resource_sliders[0],
-            resource_sliders[1]
-        ],
-    )
-
 def generate_control_card():
     """
 
     :return: A Div containing controls for graphs.
     """
-    resource_dropdown = generate_resource_dropdown(['Oven', 'Mixer', 'Cutting Board', 'Blender', 'Stove', 'Microwave', 'Fridge', 'Dishwasher'])
+    scenario_options = []
+    for scenario in SCENARIOS:
+        scenario_options.append({"label": scenario, "value": scenario})
     return html.Div(
         id="control-card",
         children=[
             html.P("Select Scenario"),
             dcc.Dropdown(
                 id="scenario-select",
-                options=[{"label": 'Baking', "value": 'Baking'}, {'label': 'Production', 'value': 'Production'}],
-                value='Baking',
+                options=scenario_options,
+                value=scenario_options[0]["value"],
             ),
             html.Br(),
-            resource_dropdown,
-            # html.P("Select Time Span"),
-            # dcc.DatePickerRange(
-            #     id="date-picker-select",
-            #     start_date=dt(2014, 1, 1),
-            #     end_date=dt(2014, 1, 15),
-            #     min_date_allowed=dt(2014, 1, 1),
-            #     max_date_allowed=dt(2014, 12, 31),
-            #     initial_visible_month=dt(2014, 1, 1),
-            # ),
             html.Br(),
             html.Br(),
             html.Br(),
@@ -227,16 +202,19 @@ def generate_unscheduled_gantt_chart(scenario, reset):
         : A Plotly figure object.
 
     """
-    model_data.load_from_json(DATA_PATH.joinpath(SCENARIOS[scenario]))
+    filename = SCENARIOS[scenario]
+    if 'json' in filename:
+        model_data.load_from_json(DATA_PATH.joinpath(filename))
+    else:
+        model_data.load_from_file(DATA_PATH.joinpath(filename))
     df = get_minimum_task_times(model_data)
     df = df.sort_values(by=['Resource', 'Start'])
     df['delta'] = df.Finish - df.Start
-    
+
     num_resources = len(df.Resource.unique())
     fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Resource",
     color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_resources -1) for n in range(num_resources)]))
 
-    fig.layout.xaxis.type = 'linear'
     for idx, fig_data in enumerate(fig.data):
         resource = fig.data[idx].name
         data_list = []
@@ -247,19 +225,9 @@ def generate_unscheduled_gantt_chart(scenario, reset):
             except:
                 continue
         fig.data[idx].x = data_list
+    fig.layout.xaxis.type = 'linear'
     return fig
 
-
-# @app.callback(
-#     Output("gantt_chart", "figure", allow_duplicate=True),
-#     [
-#         Input("optimization-output", "value"),
-#     ],
-# )
-# def update_gantt_chart_from_results(results):
-#     # Return to original hm(no colored annotation) by resetting
-#     print ('this is calld now with results: ' + str(results))
-#     return generate_gantt_chart(results=results)
 
 
 @app.callback(
@@ -287,20 +255,17 @@ def generate_gantt_chart(scenario_name: str='Bakery', results=None):
 
     """
     if results is None:
-        df = pd.read_json('data/sample_output.json')
+        df = pd.read_json('input/sample_output.json')
     else:
         df = results
     df['delta'] = df.Finish - df.Start
-    
+    print ('output df', df)
     num_tasks = len(df.Task.unique())
     fig = px.timeline(df, x_start="Start", x_end="Finish", y="Resource", color="Task",
     color_discrete_sequence = px.colors.sample_colorscale("matter", [n/(num_tasks -1) for n in range(num_tasks)]))
-    # print (fig.data[0].x)
 
     for idx, fig_data in enumerate(fig.data):
         task = fig.data[idx].name
-    # for idx, job in enumerate(fig.data):
-        # print ('job at idx ' + str(idx) + ': ' + str(job))
         data_list = []
 
         for resource in fig.data[idx].y:
@@ -311,13 +276,6 @@ def generate_gantt_chart(scenario_name: str='Bakery', results=None):
         fig.data[idx].x = data_list
     # fig.update_yaxes(autorange="reversed") 
     fig.layout.xaxis.type = 'linear'
-    # fig.data[0].x = df[df.Task == 'Cupcakes'].delta.tolist()
-    # fig.data[1].x = df[df.Task == 'Smoothie'].delta.tolist()
-    # fig.data[2].x = df[df.Task == 'Veggies'].delta.tolist()
-    # fig.data[3].x = df[df.Task == 'Lasagna'].delta.tolist()
-    # fig.data[4].x = [df.delta.tolist()[4]]
-    # for d in range(df.shape[0]):
-    #     fig.data[d].x = df.delta.tolist()
     return fig
 
 

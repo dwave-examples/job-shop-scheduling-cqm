@@ -1,0 +1,6 @@
+{
+    "job_a": [{"resource": "resource_1", "duration": 1}, {"resource": "resource_2", "duration": 2}],
+    "job_b": [{"resource": "resource_1", "duration": 1}, {"resource": "resource_3", "duration": 2}],
+    "job_c": [{"resource": "resource_2", "duration": 1}, {"resource": "resource_3", "duration": 2}],
+    "job_d": [{"resource": "resource_1", "duration": 1}, {"resource": "resource_2", "duration": 2}, {"resource": "resource_3", "duration": 3}]
+}
