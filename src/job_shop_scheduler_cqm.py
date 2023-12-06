@@ -207,8 +207,6 @@ class JobShopScheduler:
     def _add_objective(self):
         """This function adds the objective function to the constrained quadratic model.
         """
-        # import pdb
-        # pdb.set_trace()
         self.cqm.set_objective(
             sum(
                 sum(t * self.task_start_vars[get_label(task, t)] \
