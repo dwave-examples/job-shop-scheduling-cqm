@@ -249,6 +249,9 @@ def run_shop_scheduler(
     model.add_makespan_constraint(job_data)
     model.define_objective_function()
 
+    if verbose:
+        print_cqm_stats(model.cqm)
+
     solver_start_time = time()
     if use_mip_solver:
         sol = model.call_mip_solver()
@@ -266,6 +269,13 @@ def run_shop_scheduler(
                         model_building_start, solver_time, time() - start_time]],
                     headers="firstrow"))
     
+    # Write solution to a file.
+    write_solution_to_file(
+        job_data, model.solution, model.completion_time, out_sol_file)
+
+    # Plot solution
+    job_plotter.plot_solution(job_data, model.solution, out_plot_file)
+
     df = model.solution_as_dataframe()
     return df
 
@@ -325,62 +335,3 @@ if __name__ == "__main__":
 
     run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
                           allow_quadratic_constraints=allow_quadratic_constraints)
-    import pdb
-    pdb.set_trace()
-    # Create an empty JSS CQM model.
-    model = JobShopSchedulingCQM()
-
-    # Define CQM model.
-    model.define_cqm_model()
-
-    # Define CQM variables.
-    model.define_variables(job_data)
-
-    # Add precedence constraints.
-    model.add_precedence_constraints(job_data)
-
-    # Add constraint to enforce one job only on a machine.
-    if allow_quadratic_constraints:
-        model.add_quadratic_overlap_constraint(job_data)
-    else:
-        model.add_disjunctive_constraints(job_data)
-
-    # Add make span constraints.
-    model.add_makespan_constraint(job_data)
-
-    # Define objective function.
-    model.define_objective_function()
-
-    # Print Model statistics
-    print_cqm_stats(model.cqm)
-    
-    # model.call_mip_solver()
-    # Finished building the model now time it.
-    model_building_time = time() - start_time
-
-    current_time = time()
-    # Call cqm solver.
-    model.call_cqm_solver(time_limit, job_data)
-
-    # Finished solving the model now time it.
-    solver_time = time() - current_time
-
-    # Print results.
-    print(" \n" + "=" * 55 + "SOLUTION RESULTS" + "=" * 55)
-    print(tabulate([["Completion Time", "Max Possible Make-Span",
-                     "Model Building Time (s)", "Solver Call Time (s)",
-                     "Total Runtime (s)"],
-                    [model.completion_time, job_data.get_max_makespan(),
-                     model_building_time, solver_time, time() - start_time]],
-                   headers="firstrow"))
-
-    # Write solution to a file.
-    write_solution_to_file(
-        job_data, model.solution, model.completion_time, out_sol_file)
-
-    # Plot solution
-    job_plotter.plot_solution(job_data, model.solution, out_plot_file)
-
-
-    import pdb
-    pdb.set_trace()
