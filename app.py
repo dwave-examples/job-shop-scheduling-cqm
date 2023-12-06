@@ -30,6 +30,17 @@ Apache License, Version 2.0
 
 '''
 
+'''
+TODO:
+1) connect the run button to the optimization function
+2) connect the reset button to the reset function
+3) split the output onto a separate tab
+4) add option to switch solver / run multiple solvers against eachother
+5) add benchmarking results from (Ku & Beck 2016)
+6) connect output table to live results
+7) add loading bar to indicate optimization is running
+'''
+
 
 import dash
 from dash import dcc
