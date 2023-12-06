@@ -1,6 +1,8 @@
 from collections.abc import Iterable
 import json
 
+from src.utils.utils import read_instance, read_taillard_instance
+
 class Task:
     """This class represents a task in a job shop scheduling problem.
 
@@ -291,6 +293,7 @@ class JobShopData:
         """
         self.__init__()        
         jobs = json.load(open(json_file, 'r'))
+        print ("jobs: ", jobs, "\n")
         self.load_from_dict(jobs)
         # for job, task_list in jobs.items():
         #     for task in task_list:
@@ -308,3 +311,17 @@ class JobShopData:
             for (resource, duration) in task_list:
                 
                 self.add_task(Task(job, duration=duration, resource=resource))
+
+
+    def load_from_file(self, filename: str) -> None:
+        """Loads data from a file.
+
+        Args:
+            filename (str): the file to load data from
+        """
+        if 'taillard' in str(filename):
+            job_dict = read_taillard_instance(filename)
+        else:
+            job_dict = read_instance(filename)
+
+        self.load_from_dict(job_dict)
