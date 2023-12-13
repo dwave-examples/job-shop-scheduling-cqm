@@ -7,10 +7,10 @@ from dimod import ConstrainedQuadraticModel, Binary, Integer, SampleSet
 from dwave.system import LeapHybridCQMSampler
 import pandas as pd
 
-from utils.utils import print_cqm_stats, write_solution_to_file, read_instance, read_taillard_instance
-import utils.plot_schedule as job_plotter
-import utils.mip_solver as mip_solver
-from model_data import JobShopData
+from src.utils.utils import print_cqm_stats, write_solution_to_file, read_instance, read_taillard_instance
+import src.utils.plot_schedule as job_plotter
+import src.utils.mip_solver as mip_solver
+from src.model_data import JobShopData
 
 
 
@@ -212,17 +212,19 @@ class JobShopSchedulingCQM():
 
 def run_shop_scheduler(
     job_data: JobShopData,
-    max_time: int = None,
+    solver_time_limit: int = None,
     use_mip_solver: bool = False,
     verbose: bool = False,
-    allow_quadratic_constraints: bool = True
+    allow_quadratic_constraints: bool = True,
+    out_sol_file: str = None,
+    out_plot_file: str = None
     ) -> pd.DataFrame:
     """This function runs the job shop scheduler on the given data.
 
     Args:
         job_data (JobShopData): A JobShopData object that holds the data for this job shop 
             scheduling problem.
-        max_time (int, optional): Upperbound on how long the schedule can be; leave empty to 
+        solver_time_limit (int, optional): Upperbound on how long the schedule can be; leave empty to 
             auto-calculate an appropriate value. Defaults to None.
         use_mip_solver (bool, optional): Whether to use the MIP solver instead of the CQM solver.
             Defaults to False.
@@ -237,7 +239,7 @@ def run_shop_scheduler(
     """    
     if allow_quadratic_constraints and use_mip_solver:
         raise ValueError("Cannot use quadratic constraints with MIP solver")
-    model_building_start = time() - start_time
+    model_building_start = time()
     model = JobShopSchedulingCQM(model_data=job_data)
     model.define_cqm_model()
     model.define_variables(job_data)
@@ -256,7 +258,7 @@ def run_shop_scheduler(
     if use_mip_solver:
         sol = model.call_mip_solver()
     else:
-        model.call_cqm_solver(max_time, job_data)
+        model.call_cqm_solver(time_limit=solver_time_limit, model_data=job_data)
         sol = model.best_sample
     solver_time = time() - solver_start_time
 
@@ -266,15 +268,17 @@ def run_shop_scheduler(
                         "Model Building Time (s)", "Solver Call Time (s)",
                         "Total Runtime (s)"],
                         [model.completion_time, job_data.get_max_makespan(),
-                        model_building_start, solver_time, time() - start_time]],
+                        model_building_start, solver_time, time() - model_building_start]],
                     headers="firstrow"))
     
     # Write solution to a file.
-    write_solution_to_file(
-        job_data, model.solution, model.completion_time, out_sol_file)
+    if out_sol_file is not None:
+        write_solution_to_file(
+            job_data, model.solution, model.completion_time, out_sol_file)
 
     # Plot solution
-    job_plotter.plot_solution(job_data, model.solution, out_plot_file)
+    if out_plot_file is not None:
+        job_plotter.plot_solution(job_data, model.solution, out_plot_file)
 
     df = model.solution_as_dataframe()
     return df
