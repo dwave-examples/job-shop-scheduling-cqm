@@ -47,6 +47,7 @@ from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output, ClientsideFunction
 
+import plotly.graph_objs as go
 from plotly.colors import n_colors
 import plotly.express as px
 import pandas as pd
@@ -54,7 +55,8 @@ from datetime import datetime as dt
 import pathlib
 
 from src.model_data import JobShopData
-from demo import run_job_shop_scheduler
+from src.job_shop_scheduler import run_shop_scheduler
+# from demo import run_job_shop_scheduler
 
 
 #built-in color scales at https://plotly.com/python/builtin-colorscales/y
@@ -63,6 +65,16 @@ SCENARIOS = {
     '3x3': "instance3_3.txt",
     '5x5': "instance5_5.txt",
     '10x10': "instance10_10.txt"
+}
+
+MODEL_OPTIONS = {
+    "Quadtratic Model": "QM",
+    "Mixed Integer Model": "MIP"
+}
+
+SOLVER_OPTIONS = {
+    "D-Wave Hybrid Solver": "Hybrid",
+    "COIN-OR Branch-and-Cut Solver (CBC)": "MIP"
 }
 
 app = dash.Dash(
@@ -101,11 +113,11 @@ def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
         start_time = 0
         for task in tasks:
             end_time = start_time + task.duration
-            task_data.append({'Task': task.job, 'Start': start_time, 'Finish': end_time, 'Resource': task.resource})
+            task_data.append({'Job': task.job, 'Start': start_time, 'Finish': end_time, 'Resource': task.resource})
             start_time = end_time
     df = pd.DataFrame(task_data)
     df['delta'] = df.Finish - df.Start
-    df['Task'] = df['Task'].astype(str)
+    df['Job'] = df['Job'].astype(str)
     df['Resource'] = df['Resource'].astype(str)
     return df
 
@@ -153,12 +165,17 @@ def generate_duration_slider(resource, min_value=1, max_value=5):
 
 def generate_control_card():
     """
-
     :return: A Div containing controls for graphs.
     """
     scenario_options = []
     for scenario in SCENARIOS:
         scenario_options.append({"label": scenario, "value": scenario})
+    model_options = []
+    for model_option in MODEL_OPTIONS:
+        model_options.append({"label": model_option, "value": model_option})
+    solver_options = []
+    for solver_option in SOLVER_OPTIONS:
+        solver_options.append({"label": solver_option, "value": solver_option})
     return html.Div(
         id="control-card",
         children=[
@@ -168,6 +185,18 @@ def generate_control_card():
                 options=scenario_options,
                 value=scenario_options[0]["value"],
             ),
+            html.P("Select Model"),
+            dcc.Dropdown(
+                id="model-select",
+                options=model_options,
+                value=model_options[0]["value"],
+            ),
+            html.P("Select Solver"),
+            dcc.Dropdown(
+                id="solver-select",
+                options=solver_options,
+                value=solver_options[0]["value"],
+            ),
             html.Br(),
             html.Br(),
             html.Br(),
@@ -176,6 +205,7 @@ def generate_control_card():
                 id="button-group",
                 children=[
                     html.Button(id="reset-button", children="Reset", n_clicks=0),
+                    html.Br(),
                     html.Button(id="run-button", children="Run Optimization", n_clicks=0)
                 ]
             ),
@@ -184,16 +214,29 @@ def generate_control_card():
 
 
 @app.callback(
-    Output("optimization-output", "value"),
-    [Input('run-button', 'n_clicks')],
+    Output("optimized_gantt_chart", 'figure'),
+    Output("optimized_gantt_chart", 'style'),
+    [
+        Input('run-button', 'n_clicks')
+    ]
 )
-def run_optimization(reset_click):
-    if reset_click > 0:
+def run_optimization(run_click):
+    print ('run optimization called')
+    if run_click > 0:
         print ('starting optimization')
-        
-        results = run_job_shop_scheduler(model_data, max_time=5)
+        results = run_shop_scheduler(model_data)
+        # results = run_job_shop_scheduler(model_data, max_time=5)
         print ('finished optimization')
+        print ('results are: ' + str(results))
+        # results.to_csv('test.csv',)
+        # results['JobNumber'] = results['Job'].apply(lambda x: x.job)
         # update_gantt_chart_from_results(results)
+        fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+        return fig, {'visibility': 'visible'}
+    else:
+        print ("returning none")
+        return go.Figure(), {'visibility': 'hidden'}
+
 
 
 @app.callback(
@@ -201,7 +244,7 @@ def run_optimization(reset_click):
     [
         Input("scenario-select", "value"),
         Input("reset-button", "n_clicks"),
-    ],
+    ]
 )
 def generate_unscheduled_gantt_chart(scenario, reset):
     """Generates a Gantt chart of the unscheduled tasks for the given scenario.
@@ -213,79 +256,72 @@ def generate_unscheduled_gantt_chart(scenario, reset):
         : A Plotly figure object.
 
     """
-    filename = SCENARIOS[scenario]
-    if 'json' in filename:
-        model_data.load_from_json(DATA_PATH.joinpath(filename))
-    else:
-        model_data.load_from_file(DATA_PATH.joinpath(filename))
-    df = get_minimum_task_times(model_data)
-    df = df.sort_values(by=['Resource', 'Start'])
-    df['delta'] = df.Finish - df.Start
+    fig = generate_gantt_chart(scenario=scenario, y_axis='Job', color='Resource')
+    # print ("generating unscheduled chart for scenario: " + scenario)
+    # filename = SCENARIOS[scenario]
+    # if 'json' in filename:
+    #     model_data.load_from_json(DATA_PATH.joinpath(filename))
+    # else:
+    #     model_data.load_from_file(DATA_PATH.joinpath(filename))
+    # df = get_minimum_task_times(model_data)
+    # df = df.sort_values(by=['Resource', 'Start'])
+    # df['delta'] = df.Finish - df.Start
 
-    num_resources = len(df.Resource.unique())
-    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Resource",
-    color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_resources -1) for n in range(num_resources)]))
+    # num_resources = len(df.Resource.unique())
+    # fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Resource",
+    # color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_resources -1) for n in range(num_resources)]))
 
-    for idx, fig_data in enumerate(fig.data):
-        resource = fig.data[idx].name
-        data_list = []
+    # for idx, fig_data in enumerate(fig.data):
+    #     resource = fig.data[idx].name
+    #     data_list = []
 
-        for job in fig.data[idx].y:
-            try:
-                data_list.append(df[(df.Task == job) & (df.Resource == resource)].delta.tolist()[0])
-            except:
-                continue
-        fig.data[idx].x = data_list
-    fig.layout.xaxis.type = 'linear'
+    #     for job in fig.data[idx].y:
+    #         try:
+    #             data_list.append(df[(df.Task == job) & (df.Resource == resource)].delta.tolist()[0])
+    #         except:
+    #             continue
+    #     fig.data[idx].x = data_list
+        
+    # fig.layout.xaxis.type = 'linear'
+    # print ('fig.data from unscheduled: ' + str(fig.data))
     return fig
 
 
-
-@app.callback(
-    Output("gantt_chart", "figure", allow_duplicate=True),
-    [
-        Input("scenario-select", "value"),
-        Input("reset-button", "n_clicks"),
-
-    ],
-)
-def update_gantt_chart(scenario, reset_click):
-    # Return to original hm(no colored annotation) by resetting
-    return generate_gantt_chart(scenario)
-
-
-def generate_gantt_chart(scenario_name: str='Bakery', results=None):
-    """Generates a Gantt chart of the schedule for the given scenario.
+def generate_gantt_chart(scenario=None, df=None, y_axis='Job', color='Resource'):
+    """Generates a Gantt chart of the unscheduled tasks for the given scenario.
 
     Args:
-        scenario_name (str, optional): The name of the scenario; must
-        be a key in SCENARIOS. Defaults to 'Bakery'.
+        scenario (str): The name of the scenario; must be a key in SCENARIOS.
 
     Returns:
         : A Plotly figure object.
 
     """
-    if results is None:
-        df = pd.read_json('input/sample_output.json')
-    else:
-        df = results
+    if df is None:
+        filename = SCENARIOS[scenario]
+        if 'json' in filename:
+            model_data.load_from_json(DATA_PATH.joinpath(filename))
+        else:
+            model_data.load_from_file(DATA_PATH.joinpath(filename))
+        df = get_minimum_task_times(model_data)
+    df = df.sort_values(by=[color, 'Start'])
     df['delta'] = df.Finish - df.Start
-    print ('output df', df)
-    num_tasks = len(df.Task.unique())
-    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Resource", color="Task",
-    color_discrete_sequence = px.colors.sample_colorscale("matter", [n/(num_tasks -1) for n in range(num_tasks)]))
+    df[color] = df[color].astype(str)
+    df[y_axis] = df[y_axis].astype(str)
+    num_items = len(df[color].unique())
+    fig = px.timeline(df, x_start="Start", x_end="Finish", y=y_axis, color=color,
+    color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_items -1) for n in range(num_items)]))
 
     for idx, fig_data in enumerate(fig.data):
-        task = fig.data[idx].name
+        resource = fig.data[idx].name
         data_list = []
-
-        for resource in fig.data[idx].y:
+        for job in fig.data[idx].y:
             try:
-                data_list.append(df[(df.Resource == resource) & (df.Task == task)].delta.tolist()[0])
+                data_list.append(df[(df[y_axis] == job) & (df[color] == resource)].delta.tolist()[0])
             except:
                 continue
         fig.data[idx].x = data_list
-    # fig.update_yaxes(autorange="reversed") 
+        
     fig.layout.xaxis.type = 'linear'
     return fig
 
@@ -315,33 +351,28 @@ app.layout = html.Div(
             id="right-column",
             className="eight columns",
             children=[
-                # Gantt chart of scheduled tasks
                     html.Div(
-                    id="gantt_chart_card",
+                    id="unscheduled_gantt_chart_card",
                     children=[
                         html.B("Jobs to be Scheduled"),
                         html.Hr(),
                         dcc.Graph(id="unscheduld_gantt_chart"),
                     ],
-                ),
-                html.Div(
-                    id="gantt_chart_card",
-                    children=[
-                        html.B("Optimized Schedule"),
-                        html.Hr(),
-                        dcc.Graph(id="gantt_chart"),
-                        dcc.Loading(
-                            parent_className='gantt_chart',
-                            id="loading-1",
-                            children=[html.Div(id="loading-output-1")],
-                            type="default",
-                        ),
-                    ],
-                ),
-            ],
-        ),
-    ],
-)
+                    )
+                ,
+                    dcc.Loading(id = "loading-icon", 
+                        children=[ html.Div(
+                        id="optimized_gantt_chart_card",
+                        children=[
+                            html.B("CQM Output"),
+                            html.Hr(),
+                            dcc.Graph(id="optimized_gantt_chart", style={'visibility': 'hidden'}),
+                        ]
+                        )], 
+                        type="default")
+             ])
+             ])
+
 
 
 app.clientside_callback(
