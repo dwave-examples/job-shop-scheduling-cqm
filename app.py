@@ -32,13 +32,16 @@ Apache License, Version 2.0
 
 '''
 TODO:
-1) connect the run button to the optimization function
+1) connect the run button to the optimization function (x)
 2) connect the reset button to the reset function
 3) split the output onto a separate tab
 4) add option to switch solver / run multiple solvers against eachother
 5) add benchmarking results from (Ku & Beck 2016)
-6) connect output table to live results
-7) add loading bar to indicate optimization is running
+6) connect output table to live results (x)
+7) add loading bar to indicate optimization is running (x)
+8) sort y-axis alphabetically
+9) run multiple models in parallel
+10) add timer while loading
 '''
 
 
@@ -64,7 +67,11 @@ from src.job_shop_scheduler import run_shop_scheduler
 SCENARIOS = {
     '3x3': "instance3_3.txt",
     '5x5': "instance5_5.txt",
-    '10x10': "instance10_10.txt"
+    '10x10': "instance10_10.txt",
+    '15x15': "instance15_15.txt",
+    '20x15': "instance20_15.txt",
+    '20x25': "instance20_25.txt",
+    '30x30': "instance30_30.txt"
 }
 
 MODEL_OPTIONS = {
@@ -171,11 +178,11 @@ def generate_control_card():
     for scenario in SCENARIOS:
         scenario_options.append({"label": scenario, "value": scenario})
     model_options = []
-    for model_option in MODEL_OPTIONS:
-        model_options.append({"label": model_option, "value": model_option})
+    for model_option, model_value in MODEL_OPTIONS.items():
+        model_options.append({"label": model_option, "value": model_value})
     solver_options = []
-    for solver_option in SOLVER_OPTIONS:
-        solver_options.append({"label": solver_option, "value": solver_option})
+    for solver_option, solver_value in SOLVER_OPTIONS.items():
+        solver_options.append({"label": solver_option, "value": solver_value})
     return html.Div(
         id="control-card",
         children=[
@@ -192,10 +199,10 @@ def generate_control_card():
                 value=model_options[0]["value"],
             ),
             html.P("Select Solver"),
-            dcc.Dropdown(
+            dcc.Checklist(
                 id="solver-select",
                 options=solver_options,
-                value=solver_options[0]["value"],
+                value=[solver_options[0]["value"]],
             ),
             html.Br(),
             html.Br(),
@@ -217,24 +224,45 @@ def generate_control_card():
     Output("optimized_gantt_chart", 'figure'),
     Output("optimized_gantt_chart", 'style'),
     [
-        Input('run-button', 'n_clicks')
+        Input('run-button', 'n_clicks'),
+        Input("model-select", "value"),
+        Input("solver-select", "value"),
     ]
 )
-def run_optimization(run_click):
-    print ('run optimization called')
-    if run_click > 0:
-        print ('starting optimization')
-        results = run_shop_scheduler(model_data)
-        # results = run_job_shop_scheduler(model_data, max_time=5)
-        print ('finished optimization')
-        print ('results are: ' + str(results))
-        # results.to_csv('test.csv',)
-        # results['JobNumber'] = results['Job'].apply(lambda x: x.job)
-        # update_gantt_chart_from_results(results)
+def run_optimization_cqm(run_click, model, solver):
+    print ('run_click: ' + str(run_click))
+    print ('selected model: ' + str(model))
+    print ('selected solver: ' + str(solver))
+    if 'Hybrid' in solver and run_click > 0:
+        use_mip_solver = False
+        allow_quadratic_constraints = model == 'QM'
+        results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
         fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
         return fig, {'visibility': 'visible'}
     else:
-        print ("returning none")
+        return go.Figure(), {'visibility': 'hidden'}
+
+
+@app.callback(
+    Output("mip_gantt_chart", 'figure'),
+    Output("mip_gantt_chart", 'style'),
+    [
+        Input('run-button', 'n_clicks'),
+        Input("model-select", "value"),
+        Input("solver-select", "value"),
+    ]
+)
+def run_optimization_mip(run_click, model, solver):
+    print ('run_click: ' + str(run_click))
+    print ('selected model: ' + str(model))
+    print ('selected solver: ' + str(solver))
+    if 'MIP' in solver and run_click > 0:
+        use_mip_solver = True
+        allow_quadratic_constraints = model == 'QM'
+        results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
+        fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+        return fig, {'visibility': 'visible'}
+    else:
         return go.Figure(), {'visibility': 'hidden'}
 
 
@@ -257,37 +285,10 @@ def generate_unscheduled_gantt_chart(scenario, reset):
 
     """
     fig = generate_gantt_chart(scenario=scenario, y_axis='Job', color='Resource')
-    # print ("generating unscheduled chart for scenario: " + scenario)
-    # filename = SCENARIOS[scenario]
-    # if 'json' in filename:
-    #     model_data.load_from_json(DATA_PATH.joinpath(filename))
-    # else:
-    #     model_data.load_from_file(DATA_PATH.joinpath(filename))
-    # df = get_minimum_task_times(model_data)
-    # df = df.sort_values(by=['Resource', 'Start'])
-    # df['delta'] = df.Finish - df.Start
-
-    # num_resources = len(df.Resource.unique())
-    # fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Resource",
-    # color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_resources -1) for n in range(num_resources)]))
-
-    # for idx, fig_data in enumerate(fig.data):
-    #     resource = fig.data[idx].name
-    #     data_list = []
-
-    #     for job in fig.data[idx].y:
-    #         try:
-    #             data_list.append(df[(df.Task == job) & (df.Resource == resource)].delta.tolist()[0])
-    #         except:
-    #             continue
-    #     fig.data[idx].x = data_list
-        
-    # fig.layout.xaxis.type = 'linear'
-    # print ('fig.data from unscheduled: ' + str(fig.data))
     return fig
 
 
-def generate_gantt_chart(scenario=None, df=None, y_axis='Job', color='Resource'):
+def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='Resource'):
     """Generates a Gantt chart of the unscheduled tasks for the given scenario.
 
     Args:
@@ -326,6 +327,7 @@ def generate_gantt_chart(scenario=None, df=None, y_axis='Job', color='Resource')
     return fig
 
 
+#set the application HTML
 app.layout = html.Div(
     id="app-container",
     children=[
@@ -351,28 +353,42 @@ app.layout = html.Div(
             id="right-column",
             className="eight columns",
             children=[
-                    html.Div(
+                dcc.Tabs(id="tabs-example-graph", value='tab-1-example-graph', children=[
+                    dcc.Tab(label='Input', children=[html.Div(
                     id="unscheduled_gantt_chart_card",
                     children=[
                         html.B("Jobs to be Scheduled"),
                         html.Hr(),
                         dcc.Graph(id="unscheduld_gantt_chart"),
                     ],
-                    )
+                    )])
                 ,
-                    dcc.Loading(id = "loading-icon", 
+                    dcc.Tab(label='D-Wave', children=[html.Div(
+                    dcc.Loading(id = "loading-icon-dwave", 
                         children=[ html.Div(
                         id="optimized_gantt_chart_card",
                         children=[
-                            html.B("CQM Output"),
+                            html.B("D-Wave Hybrid Solver"),
                             html.Hr(),
                             dcc.Graph(id="optimized_gantt_chart", style={'visibility': 'hidden'}),
                         ]
                         )], 
-                        type="default")
+                        type="default"))])
+                ,
+                dcc.Tab(label='COIN-OR', children=[html.Div(
+                dcc.Loading(id = "loading-icon-coinor", 
+                    children=[ html.Div(
+                    id="mip_gantt_chart_card",
+                    children=[
+                        html.B("COIN-OR Output"),
+                        html.Hr(),
+                        dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
+                    ]
+                    )], 
+                    type="default"))])
              ])
              ])
-
+    ])
 
 
 app.clientside_callback(
