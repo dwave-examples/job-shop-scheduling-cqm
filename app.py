@@ -43,6 +43,7 @@ TODO:
 9) run multiple models in parallel
 10) add timer while loading
 11) same x-axis for us and COIN-OR
+12) finish get_empty_figure() func
 '''
 
 
@@ -170,6 +171,34 @@ def generate_duration_slider(resource, min_value=1, max_value=5):
     )
 
 
+def get_empty_figure():
+    fig = go.Figure()
+    return fig
+    # fig.add_trace(go.Scatter(x=[0], y=[0]))
+    # return 
+    # {
+    #     "layout": {
+    #         "xaxis": {
+    #             "visible": false
+    #         },
+    #         "yaxis": {
+    #             "visible": false
+    #         },
+    #         "annotations": [
+    #             {
+    #                 "text": "No matching data found",
+    #                 "xref": "paper",
+    #                 "yref": "paper",
+    #                 "showarrow": false,
+    #                 "font": {
+    #                     "size": 28
+    #                 }
+    #             }
+    #         ]
+    #     }
+    # }
+
+
 def generate_control_card():
     """
     :return: A Div containing controls for graphs.
@@ -240,7 +269,8 @@ def run_optimization_cqm(run_click, model, solver):
         fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
         return fig, {'visibility': 'visible'}
     else:
-        return go.Figure(), {'visibility': 'hidden'}
+        empty_figure = get_empty_figure()
+        return empty_figure, {'visibility': 'hidden'}
 
 
 @app.callback(
@@ -353,7 +383,7 @@ app.layout = html.Div(
             id="right-column",
             className="gantt-container",
             children=[
-                dcc.Tabs(id="tabs-example-graph", value='tab-1-example-graph', children=[
+                dcc.Tabs(id="tabs", value='tabs', children=[
                     dcc.Tab(label='Input', children=[html.Div(
                     id="unscheduled_gantt_chart_card",
                     className="gantt-div",
@@ -363,7 +393,7 @@ app.layout = html.Div(
                         dcc.Graph(id="unscheduld_gantt_chart"),
                     ],
                     )])
-                ,
+                    ,
                     dcc.Tab(label='D-Wave', children=[html.Div(
                     dcc.Loading(id = "loading-icon-dwave", 
                         children=[ html.Div(
@@ -376,19 +406,19 @@ app.layout = html.Div(
                         ]
                         )], 
                         type="default"))])
-                ,
-                dcc.Tab(label='COIN-OR', children=[html.Div(
-                dcc.Loading(id = "loading-icon-coinor", 
-                    children=[ html.Div(
-                    id="mip_gantt_chart_card",
-                    className="gantt-div",
-                    children=[
-                        html.B("COIN-OR", className="gantt-title"),
-                        html.Hr(),
-                        dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
-                    ]
-                    )], 
-                    type="default"))])
+                    ,
+                    dcc.Tab(label='COIN-OR', children=[html.Div(
+                    dcc.Loading(id = "loading-icon-coinor", 
+                        children=[ html.Div(
+                        id="mip_gantt_chart_card",
+                        className="gantt-div",
+                        children=[
+                            html.B("COIN-OR", className="gantt-title"),
+                            html.Hr(),
+                            dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
+                        ]
+                        )], 
+                        type="default"))])
              ])
              ])
     ])
