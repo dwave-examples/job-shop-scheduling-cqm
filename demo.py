@@ -18,7 +18,7 @@ import json
 import pandas as pd
 
 
-from src.job_shop_scheduler_cqm import JobShopScheduler
+from src.job_shop_scheduler_alt import JobShopScheduler
 from src.model_data import JobShopData
 from src.utils.utils import read_instance
 
@@ -93,8 +93,6 @@ def main():
     # cqm = JobShopScheduler(job_data)
     # task_assignments = cqm.solve()
     task_assignment_df = run_job_shop_scheduler(job_data, max_time=args.max_time)
-    import pdb
-    pdb.set_trace()
 
 
 if __name__ == "__main__":
