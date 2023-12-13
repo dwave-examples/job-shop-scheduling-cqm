@@ -147,6 +147,21 @@ H5, H3 {
     vertical-align: middle;
 }
 
+.gantt-container {
+    height: 100%;
+    margin-top: 10px;
+    background-color: white;
+}
+
+.gantt-title {
+    background-color: white;
+    margin: 5px
+}
+
+.gantt-div {
+    background-color: white;
+    margin: 5px;
+}
 
 /*
   ##Device = Most of the Smartphones Mobiles / ipad (Portrait)

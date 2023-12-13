@@ -99,7 +99,6 @@ app.config.suppress_callback_exceptions = True
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("input").resolve()
 
-
 model_data = JobShopData()
 
 
@@ -306,7 +305,7 @@ def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='
         else:
             model_data.load_from_file(DATA_PATH.joinpath(filename))
         df = get_minimum_task_times(model_data)
-    df = df.sort_values(by=[color, 'Start'])
+    df = df.sort_values(by=[y_axis, color, 'Start'])
     df['delta'] = df.Finish - df.Start
     df[color] = df[color].astype(str)
     df[y_axis] = df[y_axis].astype(str)
@@ -352,13 +351,14 @@ app.layout = html.Div(
         # Right column
         html.Div(
             id="right-column",
-            className="eight columns",
+            className="gantt-container",
             children=[
                 dcc.Tabs(id="tabs-example-graph", value='tab-1-example-graph', children=[
                     dcc.Tab(label='Input', children=[html.Div(
                     id="unscheduled_gantt_chart_card",
+                    className="gantt-div",
                     children=[
-                        html.B("Jobs to be Scheduled"),
+                        html.B("Jobs to be Scheduled", className="gantt-title"),
                         html.Hr(),
                         dcc.Graph(id="unscheduld_gantt_chart"),
                     ],
@@ -368,8 +368,9 @@ app.layout = html.Div(
                     dcc.Loading(id = "loading-icon-dwave", 
                         children=[ html.Div(
                         id="optimized_gantt_chart_card",
+                        className="gantt-div",
                         children=[
-                            html.B("D-Wave Hybrid Solver"),
+                            html.B("D-Wave Hybrid Solver", className="gantt-title"),
                             html.Hr(),
                             dcc.Graph(id="optimized_gantt_chart", style={'visibility': 'hidden'}),
                         ]
@@ -380,8 +381,9 @@ app.layout = html.Div(
                 dcc.Loading(id = "loading-icon-coinor", 
                     children=[ html.Div(
                     id="mip_gantt_chart_card",
+                    className="gantt-div",
                     children=[
-                        html.B("COIN-OR Output"),
+                        html.B("COIN-OR", className="gantt-title"),
                         html.Hr(),
                         dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
                     ]
