@@ -42,6 +42,7 @@ TODO:
 8) sort y-axis alphabetically
 9) run multiple models in parallel
 10) add timer while loading
+11) same x-axis for us and COIN-OR
 '''
 
 
