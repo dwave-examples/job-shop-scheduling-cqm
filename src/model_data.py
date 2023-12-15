@@ -285,7 +285,7 @@ class JobShopData:
         return [task for job_tasks in self._job_tasks.values() for task in job_tasks if task.resource == resource]
 
 
-    def load_from_json(self, json_file: str) -> None:
+    def load_from_json(self, json_file: str, resource_names: list=None) -> None:
         """Loads data from a JSON file.
 
         Args:
@@ -293,27 +293,43 @@ class JobShopData:
         """
         self.__init__()        
         jobs = json.load(open(json_file, 'r'))
-        print ("jobs: ", jobs, "\n")
-        self.load_from_dict(jobs)
-        # for job, task_list in jobs.items():
-        #     for task in task_list:
-        #         self.add_task(Task(job, duration=task['duration'], resource=task['resource']))
+        self.load_from_dict(jobs, resource_names=resource_names)
 
     
-    def load_from_dict(self, jobs: dict) -> None:
+    def load_from_dict(self, jobs: dict, resource_names: list=None) -> None:
         """Loads data from a dictionary.
 
         Args:
             jobs (dict): the dictionary to load data from
+            resource_names: the names of the resources to be used; if you
+                want to change the resource names from the ones in the
+                input dictionary. If None, then will use the resource
+                names in the input dictionary. If there are more resources
+                in the input dictionary than in this list, then the extra
+                resources will have a suffix append to the name.
         """
-        self.__init__()        
+        self.__init__()
+        resource_mapping = {}    
+        unique_resource_num = 0    
         for job, task_list in jobs.items():
-            for (resource, duration) in task_list:
-                
-                self.add_task(Task(job, duration=duration, resource=resource))
+            for (resource, duration) in task_list:        
+                if resource_names is not None:
+                    if resource not in resource_mapping:
+                        quotient, remainder = divmod(unique_resource_num, len(resource_names))
+                        resource_name = resource_names[remainder]
+                        if quotient > 0:
+                            resource_name += '_' + str(quotient)
+                        resource_mapping[resource] = resource_name
+                        unique_resource_num += 1
+                        resource_mapping[resource] = resource_name
+                    else:
+                        resource_name = resource_mapping[resource]
+                else:
+                    resource_name = resource
+                self.add_task(Task(job, duration=duration, resource=resource_name))
 
 
-    def load_from_file(self, filename: str) -> None:
+    def load_from_file(self, filename: str, resource_names: list=None) -> None:
         """Loads data from a file.
 
         Args:
@@ -324,4 +340,4 @@ class JobShopData:
         else:
             job_dict = read_instance(filename)
 
-        self.load_from_dict(job_dict)
+        self.load_from_dict(job_dict, resource_names=resource_names)
