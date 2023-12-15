@@ -277,6 +277,8 @@ def run_optimization_cqm(run_click, model, solver):
 @app.callback(
     Output("mip_gantt_chart", 'figure'),
     Output("mip_gantt_chart", 'style'),
+    Output("mip_gantt_chart_alt", 'figure'),
+    Output("mip_gantt_chart_alt", 'style'),
     [
         Input('run-button', 'n_clicks'),
         Input("model-select", "value"),
@@ -290,12 +292,13 @@ def run_optimization_mip(run_click, model, solver):
             allow_quadratic_constraints = model == 'QM'
             results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
             fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+            fig2 = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
             return fig, {'visibility': 'visible'}
         else:
-            return go.Figure(), {'visibility': 'hidden'}
+            return go.Figure(), {'visibility': 'hidden'}, fig2, {'visibility': 'hidden'}
     elif run_click == 0:
         empty_figure = get_empty_figure()
-        return empty_figure, {'visibility': 'hidden'}
+        return empty_figure, {'visibility': 'hidden'}, empty_figure, {'visibility': 'hidden'}
 
 
 
@@ -423,15 +426,26 @@ app.layout = html.Div(
                     ,
                     dcc.Tab(label='COIN-OR', value='coin_or_tab', children=[html.Div(
                     dcc.Loading(id = "loading-icon-coinor", 
-                        children=[ html.Div(
-                        id="mip_gantt_chart_card",
-                        className="gantt-div",
-                        children=[
-                            html.B("COIN-OR", className="gantt-title"),
-                            html.Hr(),
-                            dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
-                        ]
-                        )], 
+                        children=[ 
+                            html.Div(
+                                id="mip_gantt_chart_card",
+                                className="gantt-div",
+                                children=[
+                                    html.B("COIN-OR", className="gantt-title"),
+                                    html.Hr(),
+                                    dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
+                                ]
+                            ),
+                            html.Div(
+                                id="mip_gantt_chart_card_alt",
+                                className="gantt-div",
+                                children=[
+                                    html.B("COIN-OR", className="gantt-title"),
+                                    html.Hr(),
+                                    dcc.Graph(id="mip_gantt_chart_alt", style={'visibility': 'hidden'}),
+                                ]
+                            )
+                        ], 
                         type="default"))])
              ])
              ])
