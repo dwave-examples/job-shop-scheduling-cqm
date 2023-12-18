@@ -170,9 +170,6 @@ H5, H3 {
     margin: 5px;
 }
 
-.tab {
-}
-
 /*
   ##Device = Most of the Smartphones Mobiles / ipad (Portrait)
   */
@@ -259,3 +256,77 @@ H5, H3 {
     }
 
 }
+
+.tab-fail {
+    border-top: 2px solid red !important;
+}
+
+.tab-success {
+    border-top: 2px solid green !important;
+}
+
+.tab-warning {
+    border-top: 2px solid orange !important;
+}
+
+.tab-loading {
+    overflow: hidden;
+    position: relative;
+  }
+  .tab-loading::before, .tab-loading::after {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    border: 2px solid transparent;
+    width: 0;
+    height: 0;
+  }
+  .tab-loading::before {
+    top: 0;
+    left: 0;
+    border-top-color: #60daaa;
+    border-right-color: #60daaa;
+    animation: border1 2s infinite;
+  }
+  .tab-loading::after {
+    bottom: 0;
+    right: 0;
+    animation: border1 2s 1s infinite, borderColor1 2s 1s infinite;
+  }
+  
+  @keyframes border1 {
+    0% {
+      width: 0;
+      height: 0;
+    }
+    25% {
+      width: 100%;
+      height: 0;
+    }
+    50% {
+      width: 100%;
+      height: 100%;
+    }
+    100% {
+      width: 100%;
+      height: 100%;
+    }
+  }
+  @keyframes borderColor1 {
+    0% {
+      border-bottom-color: #60daaa;
+      border-left-color: #60daaa;
+    }
+    50% {
+      border-bottom-color: #60daaa;
+      border-left-color: #60daaa;
+    }
+    51% {
+      border-bottom-color: transparent;
+      border-left-color: transparent;
+    }
+    100% {
+      border-bottom-color: transparent;
+      border-left-color: transparent;
+    }
+  }
