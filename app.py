@@ -43,7 +43,7 @@ TODO:
 9) run multiple models in parallel
 10) add timer while loading
 11) same x-axis for us and COIN-OR
-12) finish get_empty_figure() func
+12) finish get_empty_figure() func (x)
 '''
 import json
 
@@ -170,32 +170,24 @@ def generate_duration_slider(resource, min_value=1, max_value=5):
     )
 
 
-def get_empty_figure():
+def get_empty_figure(message):
     fig = go.Figure()
+    fig.update_layout(
+        xaxis =  { "visible": False },
+        yaxis = { "visible": False },
+        annotations = [
+            {   
+                "text": message,
+                "xref": "paper",
+                "yref": "paper",
+                "showarrow": False,
+                "font": {
+                    "size": 28
+                }
+            }
+        ]
+    )
     return fig
-    # fig.add_trace(go.Scatter(x=[0], y=[0]))
-    # return 
-    # {
-    #     "layout": {
-    #         "xaxis": {
-    #             "visible": false
-    #         },
-    #         "yaxis": {
-    #             "visible": false
-    #         },
-    #         "annotations": [
-    #             {
-    #                 "text": "No matching data found",
-    #                 "xref": "paper",
-    #                 "yref": "paper",
-    #                 "showarrow": false,
-    #                 "font": {
-    #                     "size": 28
-    #                 }
-    #             }
-    #         ]
-    #     }
-    # }
 
 
 def generate_control_card():
@@ -233,13 +225,10 @@ def generate_control_card():
                 value=[solver_options[0]["value"]],
             ),
             html.Br(),
-            html.Br(),
-            html.Br(),
-            html.Br(),
             html.Div(
                 id="button-group",
                 children=[
-                    html.Button(id="run-button", children="Run Optimization", n_clicks=0)
+                    html.Button(id="run-button", children="Run Optimization", className='dwave-button', n_clicks=0)
                 ]
             ),
         ],
@@ -267,11 +256,11 @@ def run_optimization_cqm(run_click, model, solver):
             fig2 = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
             return fig, {'visibility': 'visible'}, fig2, {'visibility': 'visible'}
         else:
-            empty_figure = get_empty_figure()
-            return empty_figure, {'visibility': 'hidden'}, empty_figure, {'visibility': 'hidden'}
+            empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
+            return empty_figure, {'visibility': 'visible'}, empty_figure, {'visibility': 'visible'}
     elif run_click == 0:
-        empty_figure = get_empty_figure()
-        return empty_figure, {'visibility': 'hidden'}, empty_figure, {'visibility': 'hidden'}
+        empty_figure = get_empty_figure('Run optimization to see results')
+        return empty_figure, {'visibility': 'visible'}, empty_figure, {'visibility': 'visible'}
 
 
 @app.callback(
@@ -290,15 +279,20 @@ def run_optimization_mip(run_click, model, solver):
         if 'MIP' in solver:
             use_mip_solver = True
             allow_quadratic_constraints = model == 'QM'
-            results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
-            fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
-            fig2 = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
-            return fig, {'visibility': 'visible'}
+            if allow_quadratic_constraints:
+                fig = get_empty_figure('Unable to run MIP solver with quadratic constraints')
+                fig2 = get_empty_figure('Unable to run MIP solver with quadratic constraints')
+            else:
+                results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
+                fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+                fig2 = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
+            return fig, {'visibility': 'visible'}, fig2, {'visibility': 'visible'}
         else:
-            return go.Figure(), {'visibility': 'hidden'}, fig2, {'visibility': 'hidden'}
+            message = 'Select COIN-OR Branch and Cut Solver to run this solver'
+            return get_empty_figure(message), {'visibility': 'visible'}, get_empty_figure(message), {'visibility': 'visible'}
     elif run_click == 0:
-        empty_figure = get_empty_figure()
-        return empty_figure, {'visibility': 'hidden'}, empty_figure, {'visibility': 'hidden'}
+        empty_figure = get_empty_figure('Run optimization to see results')
+        return empty_figure, {'visibility': 'visible'}, empty_figure, {'visibility': 'visible'}
 
 
 
@@ -339,13 +333,30 @@ def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='
         else:
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
         df = get_minimum_task_times(model_data)
-    df = df.sort_values(by=[y_axis, color, 'Start'])
+    if y_axis == 'Job':
+        #convert to int if it is a string
+        if df['Job'].dtype == 'object':
+            df['JobInt'] = df['Job'].str.replace('Job', '').astype(int)
+        else:
+            df['JobInt'] = df['Job']
+        df = df.sort_values(by=['JobInt', color, 'Start'])
+        df = df.drop(columns=['JobInt'])
+    else:
+        df = df.sort_values(by=[y_axis, color, 'Start'])
     df['delta'] = df.Finish - df.Start
     df[color] = df[color].astype(str)
     df[y_axis] = df[y_axis].astype(str)
     num_items = len(df[color].unique())
+    #d-wave primary
+    colorscale = px.colors.make_colorscale(['#ffa143', '#17bebb', '#2a7de1'])
+    #d-wave bright
+    colorscale = px.colors.make_colorscale(['#FFA143', '#06ECDC', '#03b8ff'])
+    colorscale = 'Agsunset'
     fig = px.timeline(df, x_start="Start", x_end="Finish", y=y_axis, color=color,
-    color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_items -1) for n in range(num_items)]))
+    color_discrete_sequence = px.colors.sample_colorscale(colorscale, [n/(num_items -1) for n in range(num_items)]))
+
+    # fig = px.timeline(df, x_start="Start", x_end="Finish", y=y_axis, color=color,
+    # color_discrete_sequence = px.colors.sample_colorscale("Plotly3", [n/(num_items -1) for n in range(num_items)]))
 
     for idx, fig_data in enumerate(fig.data):
         resource = fig.data[idx].name
@@ -388,41 +399,47 @@ app.layout = html.Div(
             className="gantt-container",
             children=[
                 dcc.Tabs(id="tabs", value='input_tab', children=[
-                    dcc.Tab(label='Input', value='input_tab', className='tab', children=[html.Div(
-                        dcc.Loading(id = "loading-icon-input", children=[ html.Div(
-                        id="unscheduled_gantt_chart_card",
-                        className="gantt-div",
-                        children=[
-                            html.B("Jobs to be Scheduled", className="gantt-title"),
-                            html.Hr(),
-                            dcc.Graph(id="unscheduld_gantt_chart"),
-                        ],
-                        )])
-                    )])
-                    ,
-                    dcc.Tab(label='D-Wave', value='dwave_tab', children=[html.Div(
-                    dcc.Loading(id = "loading-icon-dwave", 
-                        children=[ 
-                            html.Div(
-                                id="optimized_gantt_chart_card",
+                    dcc.Tab(label='Input',
+                            value='input_tab',
+                            className='tab',
+                            children=[html.Div(
+                                dcc.Loading(id = "loading-icon-input", children=[ html.Div(
+                                id="unscheduled_gantt_chart_card",
                                 className="gantt-div",
                                 children=[
-                                    html.B("D-Wave Hybrid Solver", className="gantt-title"),
-                                    html.Hr(),
-                                    dcc.Graph(id="optimized_gantt_chart", style={'visibility': 'hidden'}),
-                                ]
-                                ),
-                            html.Div(
-                                id="optimized_gantt_chart_card_alt",
-                                className="gantt-div",
-                                children=[
-                                    html.B("D-Wave Hybrid Solver Alt", className="gantt-title"),
-                                    html.Hr(),
-                                    dcc.Graph(id="optimized_gantt_chart_alt", style={'visibility': 'hidden'}),
-                                ]
-                                )
-                            ], 
-                        type="default"))])
+                                    html.B("Jobs to be Scheduled", className="gantt-title"),
+                                    html.Hr(className="gantt-hr"),
+                                    dcc.Graph(id="unscheduld_gantt_chart"),
+                                ],
+                                )])
+                            )])
+                        ,
+                        dcc.Tab(label='D-Wave',
+                                value='dwave_tab', 
+                                children=[html.Div(
+                                    dcc.Loading(id = "loading-icon-dwave", 
+                                        children=[ 
+                                            html.Div(
+                                                id="optimized_gantt_chart_card",
+                                                className="gantt-div",
+                                                children=[
+                                                    html.B("D-Wave Hybrid Solver", className="gantt-title"),
+                                                    html.Hr(className="gantt-hr"),
+                                                    dcc.Graph(id="optimized_gantt_chart", style={'visibility': 'visible'}),
+                                                ]
+                                                ),
+                                            html.Div(
+                                                id="optimized_gantt_chart_card_alt",
+                                                className="gantt-div",
+                                                children=[
+                                                    html.B("D-Wave Hybrid Solver Alt", className="gantt-title"),
+                                                    html.Hr(className="gantt-hr"),
+                                                    dcc.Graph(id="optimized_gantt_chart_alt", style={'visibility': 'visible'}),
+                                                ]
+                                                )
+                                            ], 
+                                        type="default"))
+                                 ])
                     ,
                     dcc.Tab(label='COIN-OR', value='coin_or_tab', children=[html.Div(
                     dcc.Loading(id = "loading-icon-coinor", 
@@ -432,7 +449,7 @@ app.layout = html.Div(
                                 className="gantt-div",
                                 children=[
                                     html.B("COIN-OR", className="gantt-title"),
-                                    html.Hr(),
+                                    html.Hr(className="gantt-hr"),
                                     dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
                                 ]
                             ),
@@ -441,7 +458,7 @@ app.layout = html.Div(
                                 className="gantt-div",
                                 children=[
                                     html.B("COIN-OR", className="gantt-title"),
-                                    html.Hr(),
+                                    html.Hr(className="gantt-hr"),
                                     dcc.Graph(id="mip_gantt_chart_alt", style={'visibility': 'hidden'}),
                                 ]
                             )
