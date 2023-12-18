@@ -55,7 +55,7 @@ hr {
 .banner {
     height: 5.5rem;
     padding: 0rem 2rem 0rem;
-    background-color: navy;
+    background-color: #074c91;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -69,7 +69,7 @@ hr {
 }
 
 H5 {
-    color: #2c8cff;
+    color: #074c91;
     font-weight: 300;
 }
 
@@ -131,6 +131,13 @@ H5, H3 {
 
 #gantt_chart {
     height: 400px;
+}
+
+.gantt-hr {
+    border: 1px solid #074c91;
+    color: pink;
+    border-color: #074c91;
+    opacity: unset;
 }
 
 .table-row:nth-child(even) {
@@ -243,6 +250,12 @@ H5, H3 {
 
     .annotation-text {
         font-size: 0.8rem !important;
+    }
+
+    .dwave-button {
+        font-size: 0.8rem;
+        background-color: #074c91;
+        color: white;
     }
 
 }
