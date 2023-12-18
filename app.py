@@ -46,11 +46,12 @@ TODO:
 12) finish get_empty_figure() func (x)
 '''
 import json
-
+import time
 
 import dash
 from dash import dcc, html, ctx
 from dash.dependencies import Input, Output, ClientsideFunction
+from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 from plotly.colors import n_colors
 import plotly.express as px
@@ -62,6 +63,10 @@ from src.model_data import JobShopData
 from src.job_shop_scheduler import run_shop_scheduler
 
 #built-in color scales at https://plotly.com/python/builtin-colorscales/y
+
+PRIMARY_COLOR = 'FFA143'
+LOADING_COLOR = 'yellow'
+SUCCESS_COLOR = 'green'
 
 SCENARIOS = {
     '3x3': "instance3_3.txt",
@@ -236,10 +241,26 @@ def generate_control_card():
 
 
 @app.callback(
+    Output("dwave_tab", 'className', allow_duplicate=True),
+    Output("mip_tab", 'className', allow_duplicate=True),
+    Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
+    Output('mip_gantt_chart', 'figure', allow_duplicate=True),
+    [
+        Input('run-button', 'n_clicks')
+    ]
+)
+def update_tab_loading_state(run_click):
+    if run_click == 0:
+        empty_figure = get_empty_figure('Run optimization to see results')
+        return 'tab', 'tab', empty_figure, empty_figure
+    else:
+        empty_figure = get_empty_figure('Running...')
+        return 'tab-loading', 'tab-loading', empty_figure, empty_figure
+
+
+@app.callback(
     Output("optimized_gantt_chart", 'figure'),
-    Output("optimized_gantt_chart", 'style'),
-    Output("optimized_gantt_chart_alt", 'figure'),
-    Output("optimized_gantt_chart_alt", 'style'),
+    Output('dwave_tab', 'className', allow_duplicate=True),
     [
         Input('run-button', 'n_clicks'),
         Input("model-select", "value"),
@@ -252,22 +273,20 @@ def run_optimization_cqm(run_click, model, solver):
             use_mip_solver = False
             allow_quadratic_constraints = model == 'QM'
             results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
-            fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
-            fig2 = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
-            return fig, {'visibility': 'visible'}, fig2, {'visibility': 'visible'}
+            # fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+            fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
+            return fig,'tab-success'
         else:
+            time.sleep(0.1)
             empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
-            return empty_figure, {'visibility': 'visible'}, empty_figure, {'visibility': 'visible'}
+            return empty_figure, 'tab-warning'
     elif run_click == 0:
-        empty_figure = get_empty_figure('Run optimization to see results')
-        return empty_figure, {'visibility': 'visible'}, empty_figure, {'visibility': 'visible'}
+        raise PreventUpdate
 
 
 @app.callback(
     Output("mip_gantt_chart", 'figure'),
-    Output("mip_gantt_chart", 'style'),
-    Output("mip_gantt_chart_alt", 'figure'),
-    Output("mip_gantt_chart_alt", 'style'),
+    Output('mip_tab', 'className'),
     [
         Input('run-button', 'n_clicks'),
         Input("model-select", "value"),
@@ -280,19 +299,22 @@ def run_optimization_mip(run_click, model, solver):
             use_mip_solver = True
             allow_quadratic_constraints = model == 'QM'
             if allow_quadratic_constraints:
+                time.sleep(0.1)
                 fig = get_empty_figure('Unable to run MIP solver with quadratic constraints')
-                fig2 = get_empty_figure('Unable to run MIP solver with quadratic constraints')
+                class_name = 'tab_fail'
             else:
                 results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
-                fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
-                fig2 = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
-            return fig, {'visibility': 'visible'}, fig2, {'visibility': 'visible'}
+                # fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+                fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
+                class_name = 'tab-success'
+            return fig, class_name
         else:
+            time.sleep(0.1)
             message = 'Select COIN-OR Branch and Cut Solver to run this solver'
-            return get_empty_figure(message), {'visibility': 'visible'}, get_empty_figure(message), {'visibility': 'visible'}
+            empty_figure = get_empty_figure(message)
+            return empty_figure, 'tab-warning'
     elif run_click == 0:
-        empty_figure = get_empty_figure('Run optimization to see results')
-        return empty_figure, {'visibility': 'visible'}, empty_figure, {'visibility': 'visible'}
+        raise PreventUpdate
 
 
 
@@ -415,7 +437,9 @@ app.layout = html.Div(
                             )])
                         ,
                         dcc.Tab(label='D-Wave',
-                                value='dwave_tab', 
+                                value='dwave_tab',
+                                id='dwave_tab',
+                                className='tab',
                                 children=[html.Div(
                                     dcc.Loading(id = "loading-icon-dwave", 
                                         children=[ 
@@ -427,44 +451,30 @@ app.layout = html.Div(
                                                     html.Hr(className="gantt-hr"),
                                                     dcc.Graph(id="optimized_gantt_chart", style={'visibility': 'visible'}),
                                                 ]
-                                                ),
-                                            html.Div(
-                                                id="optimized_gantt_chart_card_alt",
-                                                className="gantt-div",
-                                                children=[
-                                                    html.B("D-Wave Hybrid Solver Alt", className="gantt-title"),
-                                                    html.Hr(className="gantt-hr"),
-                                                    dcc.Graph(id="optimized_gantt_chart_alt", style={'visibility': 'visible'}),
-                                                ]
                                                 )
                                             ], 
                                         type="default"))
                                  ])
                     ,
-                    dcc.Tab(label='COIN-OR', value='coin_or_tab', children=[html.Div(
-                    dcc.Loading(id = "loading-icon-coinor", 
-                        children=[ 
-                            html.Div(
-                                id="mip_gantt_chart_card",
-                                className="gantt-div",
-                                children=[
-                                    html.B("COIN-OR", className="gantt-title"),
-                                    html.Hr(className="gantt-hr"),
-                                    dcc.Graph(id="mip_gantt_chart", style={'visibility': 'hidden'}),
-                                ]
-                            ),
-                            html.Div(
-                                id="mip_gantt_chart_card_alt",
-                                className="gantt-div",
-                                children=[
-                                    html.B("COIN-OR", className="gantt-title"),
-                                    html.Hr(className="gantt-hr"),
-                                    dcc.Graph(id="mip_gantt_chart_alt", style={'visibility': 'hidden'}),
-                                ]
-                            )
-                        ], 
-                        type="default"))])
-             ])
+                    dcc.Tab(label='COIN-OR',
+                            id='mip_tab',
+                            className='tab',
+                            value='mip_tab', 
+                            children=[html.Div(
+                            dcc.Loading(id = "loading-icon-coinor", 
+                                children=[ 
+                                    html.Div(
+                                        id="mip_gantt_chart_card",
+                                        className="gantt-div",
+                                        children=[
+                                            html.B("COIN-OR", className="gantt-title"),
+                                            html.Hr(className="gantt-hr"),
+                                            dcc.Graph(id="mip_gantt_chart"),
+                                        ]
+                                    )
+                                ], 
+                                type="default"))])
+                    ])
              ])
     ])
 
