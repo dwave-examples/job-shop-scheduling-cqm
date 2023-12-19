@@ -1,7 +1,9 @@
 from collections.abc import Iterable
 import json
 
-from src.utils.utils import read_instance, read_taillard_instance
+import sys
+sys.path.append('./src')
+from utils.utils import read_instance, read_taillard_instance
 
 class Task:
     """This class represents a task in a job shop scheduling problem.
@@ -326,7 +328,7 @@ class JobShopData:
                         resource_name = resource_mapping[resource]
                 else:
                     resource_name = resource
-                self.add_task(Task(job, duration=duration, resource=resource_name))
+                self.add_task(Task(str(job), duration=duration, resource=resource_name))
 
 
     def load_from_file(self, filename: str, resource_names: list=None) -> None:
