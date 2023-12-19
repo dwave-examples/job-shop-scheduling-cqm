@@ -7,10 +7,12 @@ from dimod import ConstrainedQuadraticModel, Binary, Integer, SampleSet
 from dwave.system import LeapHybridCQMSampler
 import pandas as pd
 
-from src.utils.utils import print_cqm_stats, write_solution_to_file, read_instance, read_taillard_instance
-import src.utils.plot_schedule as job_plotter
-import src.utils.mip_solver as mip_solver
-from src.model_data import JobShopData
+import sys
+sys.path.append('./src')
+from utils.utils import print_cqm_stats, write_solution_to_file
+import utils.plot_schedule as job_plotter
+import utils.mip_solver as mip_solver
+from model_data import JobShopData
 
 
 
@@ -188,13 +190,18 @@ class JobShopSchedulingCQM():
         """        
         solver = mip_solver.MIPCQMSolver()
         sol = solver.sample_cqm(cqm=self.cqm, time_limit=time_limit)
-        best_sol = sol.first.sample
         self.solution = {}
+        if len(sol) == 0:
+            warnings.warn("Warning: Did not find feasible solution")
+            return self.solution
+        best_sol = sol.first.sample
+        
         for (var, val) in best_sol.items():
+
             if var.startswith('x'):
                 job, machine = var[1:].split('_')
-                task = self.model_data.get_resource_job_tasks(job=int(job), resource=int(machine))
-                self.solution[(int(job), int(machine))] = task, val, task.duration
+                task = self.model_data.get_resource_job_tasks(job=job, resource=machine)
+                self.solution[(job, machine)] = task, val, task.duration
 
     
     def solution_as_dataframe(self) -> pd.DataFrame:
@@ -212,7 +219,7 @@ class JobShopSchedulingCQM():
 
 def run_shop_scheduler(
     job_data: JobShopData,
-    solver_time_limit: int = None,
+    solver_time_limit: int = 60,
     use_mip_solver: bool = False,
     verbose: bool = False,
     allow_quadratic_constraints: bool = True,
@@ -256,7 +263,7 @@ def run_shop_scheduler(
 
     solver_start_time = time()
     if use_mip_solver:
-        sol = model.call_mip_solver()
+        sol = model.call_mip_solver(time_limit=solver_time_limit)
     else:
         model.call_cqm_solver(time_limit=solver_time_limit, model_data=job_data)
         sol = model.best_sample
@@ -328,14 +335,19 @@ if __name__ == "__main__":
     out_plot_file = args.op
     out_sol_file = args.os
     allow_quadratic_constraints = args.allow_quad
-
-    if 'taillard' in input_file:
-        job_dict = read_taillard_instance(input_file)
-    else:
-        job_dict = read_instance(input_file)
-
+    import json
+    RESOURCE_NAMES = json.load(open('./src/data/resource_names.json', 'r'))['industrial']
     job_data = JobShopData()
-    job_data.load_from_dict(job_dict)
+    # if 'taillard' in input_file:
+    job_data.load_from_file(input_file, RESOURCE_NAMES)
+    #     # job_dict = read_taillard_instance(input_file, RESOURCE_NAMES)
+    # else:
+    #     # job_dict = read_instance(input_file, RESOURCE_NAMES)
 
-    run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
+    
+    # job_data.load_from_dict(job_dict)
+
+    results = run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
                           allow_quadratic_constraints=allow_quadratic_constraints)
+    import pdb
+    pdb.set_trace()
