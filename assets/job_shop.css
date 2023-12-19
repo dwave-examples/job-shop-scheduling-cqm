@@ -249,13 +249,30 @@ H5, H3 {
         font-size: 0.8rem !important;
     }
 
-    .dwave-button {
-        font-size: 0.8rem;
-        background-color: #074c91;
-        color: white;
-    }
-
 }
+
+.run-button {
+    font-size: 1rem;
+    background-color: #2a7de1;
+    color: white;
+}
+
+.run-button:hover {
+    background-color: #074c91;
+    color: white;
+}
+
+.cancel-button {
+    font-size: 1rem;
+    background-color: #C70039;
+    color: white;
+}
+
+.cancel-button:hover {
+    background-color: #900C3F;
+    color: white;
+}       
+
 
 .tab-fail {
     border-top: 2px solid red !important;
