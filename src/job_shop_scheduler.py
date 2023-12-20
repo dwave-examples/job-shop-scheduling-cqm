@@ -145,15 +145,18 @@ class JobShopSchedulingCQM():
                 label='makespan_ctr{}'.format(job))
 
 
-    def call_cqm_solver(self, time_limit: int, model_data: JobShopData) -> None:
+    def call_cqm_solver(self, time_limit: int, model_data: JobShopData, profile: str) -> None:
         """Calls CQM solver.
 
         Args:
-            time_limit: time limit in second
-            model_data: a JobShopData data class
+            time_limit (int): time limit in second
+            model_data (JobShopData): a JobShopData data class
+            profile (str): The profile variable to pass to the Sampler. Defaults to None.
+            See documentation at 
+            https://docs.ocean.dwavesys.com/en/stable/docs_cloud/reference/generated/dwave.cloud.config.load_config.html#dwave.cloud.config.load_config
         """
-        sampler = LeapHybridCQMSampler()
-        raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit)
+        sampler = LeapHybridCQMSampler(profile=profile)
+        raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit, label='Job Shop Demo')
         feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
         num_feasible = len(feasible_sampleset)
         if num_feasible > 0:
@@ -224,7 +227,8 @@ def run_shop_scheduler(
     verbose: bool = False,
     allow_quadratic_constraints: bool = True,
     out_sol_file: str = None,
-    out_plot_file: str = None
+    out_plot_file: str = None,
+    profile: str = None
     ) -> pd.DataFrame:
     """This function runs the job shop scheduler on the given data.
 
@@ -238,6 +242,9 @@ def run_shop_scheduler(
         verbose (bool, optional): Whether to print verbose output. Defaults to False.
         allow_quadratic_constraints (bool, optional): Whether to allow quadratic constraints. 
             Defaults to True.
+        out_sol_file (str, optional): Path to the output solution file. Defaults to None.
+        out_plot_file (str, optional): Path to the output plot file. Defaults to None.
+        profile (str, optional): The profile variable to pass to the Sampler. Defaults to None.
 
     Returns:
         pd.DataFrame: A DataFrame that has the following columns: Task, Start, Finish, and
@@ -265,7 +272,7 @@ def run_shop_scheduler(
     if use_mip_solver:
         sol = model.call_mip_solver(time_limit=solver_time_limit)
     else:
-        model.call_cqm_solver(time_limit=solver_time_limit, model_data=job_data)
+        model.call_cqm_solver(time_limit=solver_time_limit, model_data=job_data, profile=profile)
         sol = model.best_sample
     solver_time = time() - solver_start_time
 
@@ -327,6 +334,10 @@ if __name__ == "__main__":
     parser.add_argument('-allow_quad', action='store_true',
                         help='Whether to allow quadratic constraints')
     
+    parser.add_argument('-profile', type=str,
+                        help='The profile variable to pass to the Sampler. Defaults to None.',
+                        default=None)
+    
     
     # Parse input arguments.
     args = parser.parse_args()
@@ -338,16 +349,7 @@ if __name__ == "__main__":
     import json
     RESOURCE_NAMES = json.load(open('./src/data/resource_names.json', 'r'))['industrial']
     job_data = JobShopData()
-    # if 'taillard' in input_file:
     job_data.load_from_file(input_file, RESOURCE_NAMES)
-    #     # job_dict = read_taillard_instance(input_file, RESOURCE_NAMES)
-    # else:
-    #     # job_dict = read_instance(input_file, RESOURCE_NAMES)
-
-    
-    # job_data.load_from_dict(job_dict)
 
     results = run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
-                          allow_quadratic_constraints=allow_quadratic_constraints)
-    import pdb
-    pdb.set_trace()
+                          allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile)

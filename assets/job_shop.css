@@ -290,6 +290,10 @@ H5, H3 {
     margin-top:10px;
 }
 
+#solver_time_limit {
+    margin-bottom:20px;
+}
+
 .tab-loading {
     overflow: hidden;
     position: relative;
