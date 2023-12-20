@@ -40,7 +40,6 @@ class JobShopData:
         Args:
             jobs (Iterable[str]): The jobs to be scheduled.
             resources (Iterable[str]): The resources to be used.
-        
         """        
         self._jobs = set(jobs)
         self._resources = set(resources)
@@ -143,7 +142,6 @@ class JobShopData:
         Raises:
             ValueError: if the resource position or duration is negative
         """
-
         if task.resource not in self._resources:
             self.add_resource(task.resource)
         

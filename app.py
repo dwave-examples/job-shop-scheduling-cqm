@@ -39,8 +39,8 @@ TODO:
 5) add benchmarking results from (Ku & Beck 2016) (likely won't add this)
 6) connect output table to live results (x)
 7) add loading bar to indicate optimization is running (x)
-8) sort y-axis alphabetically
-9) run multiple models in parallel
+8) sort y-axis alphabetically (x)
+9) run multiple models in parallel (x)
 10) add timer while loading
 11) same x-axis for us and COIN-OR
 12) finish get_empty_figure() func (x)
@@ -51,13 +51,11 @@ import time
 import dash
 from dash import dcc, html, ctx, DiskcacheManager
 from dash.dependencies import Input, Output, ClientsideFunction, State
-# from dash.long_callback import DiskcacheLongCallbackManager
 from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 from plotly.colors import n_colors
 import plotly.express as px
 import pandas as pd
-from datetime import datetime as dt
 import pathlib
 ## Diskcache
 import diskcache
@@ -77,7 +75,7 @@ SCENARIOS = {
     '3x3': "instance3_3.txt",
     '5x5': "instance5_5.txt",
     '10x10': "instance10_10.txt",
-    '15x15': "instance15_15.txt",
+    '15x15': "taillard15_15.txt",
     '20x15': "instance20_15.txt",
     '20x25': "instance20_25.txt",
     '30x30': "instance30_30.txt"
@@ -213,6 +211,7 @@ def generate_control_card():
     solver_options = []
     for solver_option, solver_value in SOLVER_OPTIONS.items():
         solver_options.append({"label": solver_option, "value": solver_value})
+    
     return html.Div(
         id="control-card",
         children=[
@@ -221,12 +220,14 @@ def generate_control_card():
                 id="scenario-select",
                 options=scenario_options,
                 value=scenario_options[0]["value"],
+                clearable=False
             ),
             html.P("Select Model", className='control-p'),
             dcc.Dropdown(
                 id="model-select",
                 options=model_options,
                 value=model_options[0]["value"],
+                clearable=False
             ),
             html.P("Select Solver", className='control-p'),
             dcc.Checklist(
@@ -234,7 +235,17 @@ def generate_control_card():
                 options=solver_options,
                 value=[solver_options[0]["value"]],
             ),
-            html.Br(),
+            html.P("Solver Time Limit", className='control-p'),
+            dcc.Input(
+            id="solver_time_limit",
+            type='number',
+            value=20,
+            min=5,
+            max=300,
+            step=5,
+            ),
+            # html.Br(),
+            # html.Br(),
             html.Div(
                 id="button-group",
                 children=[
@@ -253,6 +264,35 @@ def generate_control_card():
 
 
 @app.callback(
+    Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
+    Output('mip_gantt_chart', 'figure', allow_duplicate=True),   
+    [Input('run-button', 'n_clicks')],
+    prevent_initial_call=False
+)
+def load_initial_figures(n_clicks: int) -> tuple[go.Figure, go.Figure]:
+    """This function loads the initial figures for the Gantt charts.
+    It will only be used on the initial load; after that this will
+    pass PreventUpdate
+
+    Args:
+        n_clicks (int): The number of times the run button has been
+        clicked.
+
+    Raises:
+        PreventUpdate: If the run button has already been clicked,
+        this will raise PreventUpdate to prevent the initial figures
+        from being loaded again.
+
+    Returns:
+        tuple: A tuple of two Plotly figures.
+    """    
+    if n_clicks == 0:
+        empty_figure = get_empty_figure('Run optimization to see results')
+        return empty_figure, empty_figure
+    else:
+        raise PreventUpdate
+
+@app.callback(
     Output("dwave_tab", 'className', allow_duplicate=True),
     Output("mip_tab", 'className', allow_duplicate=True),
     Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
@@ -262,7 +302,27 @@ def generate_control_card():
         Input("cancel-button", "n_clicks")
     ]
 )
-def update_tab_loading_state(run_click, cancel_click):
+def update_tab_loading_state(run_click: int, cancel_click: int) -> \
+    tuple[str, str, go.Figure, go.Figure]:
+    """This function updates the tab loading state after the run button
+    or cancel button has been clicked. 
+
+    Args:
+        run_click (int): The number of times the run button has been
+            clicked.
+        cancel_click (int): The number of times the cancel button has
+            been clicked.
+
+    Raises:
+        PreventUpdate: If the event is trigged by anything other than 
+            the run button or cancel button, this will raise PreventUpdate
+            to prevent the tab loading state from being updated.
+
+    Returns:
+        tuple: A tuple of four objects: the class name for the D-Wave tab,
+        the class name for the Classical tab, the figure for the D-Wave tab,
+        and the figure for the Classical  tab.
+    """    
     if ctx.triggered_id == "run-button":
         if run_click == 0:
             empty_figure = get_empty_figure('Run optimization to see results')
@@ -274,10 +334,7 @@ def update_tab_loading_state(run_click, cancel_click):
         if cancel_click > 0:
             empty_figure = get_empty_figure('Last run cancelled prior to completion. Re-run to see results')
             return 'tab', 'tab', empty_figure, empty_figure
-        else:
-            raise PreventUpdate
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @app.callback(
@@ -288,32 +345,55 @@ def update_tab_loading_state(run_click, cancel_click):
         Input('run-button', 'n_clicks'),
         State("model-select", "value"),
         State("solver-select", "value"),
-        State("scenario-select", "value")
+        State("scenario-select", "value"),
+        State("solver_time_limit", "value"),
     ],
-    running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'})],
+    running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'}),
+             (Output("run-button", "style"), {"visibility": "hidden"}, {'visibility': 'visible'})],
     cancel=[Input("cancel-button", "n_clicks")],
+    prevent_initial_call=True
 )
-def run_optimization_cqm(run_click, model, solver, scenario):
+def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str, time_limit: int) \
+    -> tuple[go.Figure, str]:
+    """This function runs the optimization using the D-Wave hybrid solver.
+
+    Args:
+        run_click (int): The number of times the run button has been
+            clicked.
+        model (str): The model to use for the optimization.
+        solver (str): The solver to use for the optimization.
+        scenario (str): The scenario to use for the optimization.
+        time_limit (int): The time limit for the optimization.
+
+    Raises:
+        PreventUpdate: If this was not trigged by a run-button click,
+            this will raise PreventUpdate to prevent the optimization
+            from running.
+
+    Returns:
+        tuple: A tuple of two objects: the Plotly figure for the Gantt
+            chart and the class name for the tab.
+    """    
+    if run_click == 0 or ctx.triggered_id != "run-button":
+        empty_figure = get_empty_figure('Run optimization to see results')
+        return empty_figure, 'tab'
     if ctx.triggered_id == "run-button":
         if 'Hybrid' in solver:
             model_data = JobShopData()
             filename = SCENARIOS[scenario]
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
             allow_quadratic_constraints = model == 'QM'
-            print ('jobs', model_data.jobs)
-            results = run_shop_scheduler(model_data, use_mip_solver=False, allow_quadratic_constraints=allow_quadratic_constraints)
-            print ('results', results)           
+            results = run_shop_scheduler(model_data, 
+                                         use_mip_solver=False,
+                                         allow_quadratic_constraints=allow_quadratic_constraints,
+                                         solver_time_limit=time_limit)         
             fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
             return fig,'tab-success'
         else:
             time.sleep(0.1)
             empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
             return empty_figure, 'tab-warning'
-    elif run_click == 0:
-        empty_figure = get_empty_figure('Run optimization to see results')
-        return empty_figure, 'tab'
     else:
-        print ('not gonna update')
         raise PreventUpdate
 
 
@@ -324,13 +404,23 @@ def run_optimization_cqm(run_click, model, solver, scenario):
         Input('run-button', 'n_clicks'),
         State("model-select", "value"),
         State("solver-select", "value"),
+        State("scenario-select", "value"),
+        State("solver_time_limit", "value")
     ],
-    running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'})],
-    cancel=[Input("cancel-button", "n_clicks")]
+    running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'}),
+             (Output("run-button", "style"), {"visibility": "hidden"}, {'visibility': 'visible'})],
+    cancel=[Input("cancel-button", "n_clicks")],
+    prevent_initial_call=True
 )
-def run_optimization_mip(run_click, model, solver):
+def run_optimization_mip(run_click, model, solver, scenario, time_limit):
+    if run_click == 0:
+        empty_figure = get_empty_figure('Run optimization to see results')
+        return empty_figure, 'tab'
     if ctx.triggered_id == "run-button":
         if 'MIP' in solver:
+            model_data = JobShopData()
+            filename = SCENARIOS[scenario]
+            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
             use_mip_solver = True
             allow_quadratic_constraints = model == 'QM'
             if allow_quadratic_constraints:
@@ -338,8 +428,10 @@ def run_optimization_mip(run_click, model, solver):
                 fig = get_empty_figure('Unable to run MIP solver with quadratic constraints')
                 class_name = 'tab-fail'
             else:
-                results = run_shop_scheduler(model_data, use_mip_solver=use_mip_solver, allow_quadratic_constraints=allow_quadratic_constraints)
-                # fig = generate_gantt_chart(df=results, y_axis='Resource', color='Job')
+                results = run_shop_scheduler(model_data, 
+                                             use_mip_solver=use_mip_solver,
+                                             allow_quadratic_constraints=allow_quadratic_constraints,
+                                             solver_time_limit=time_limit)
                 if len(results) == 0:
                     fig = get_empty_figure('MIP solver failed to find a solution.')
                     class_name = 'tab-fail'
@@ -352,11 +444,7 @@ def run_optimization_mip(run_click, model, solver):
             message = 'Select COIN-OR Branch and Cut Solver to run this solver'
             empty_figure = get_empty_figure(message)
             return empty_figure, 'tab-warning'
-    elif run_click == 0:
-        empty_figure = get_empty_figure('Run optimization to see results')
-        return empty_figure, 'tab'
     else:
-        print ('not gonna update too')
         raise PreventUpdate
 
 
@@ -496,7 +584,7 @@ app.layout = html.Div(
                                         ]))
                                     ])
                                     ,
-                        dcc.Tab(label='COIN-OR',
+                        dcc.Tab(label='Classical',
                                 id='mip_tab',
                                 className='tab',
                                 value='mip_tab', 
@@ -505,7 +593,7 @@ app.layout = html.Div(
                                         id="mip_gantt_chart_card",
                                         className="gantt-div",
                                         children=[
-                                            html.B("COIN-OR", className="gantt-title"),
+                                            html.B("COIN-OR Branch-and-Cut Solver", className="gantt-title"),
                                             html.Hr(className="gantt-hr"),
                                             dcc.Loading(id = "loading-icon-coinor", 
                                                 children=[ 
