@@ -160,11 +160,11 @@ class JobShopSchedulingCQM():
         """
         sampler = LeapHybridCQMSampler(profile=profile)
         raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit, label='Job Shop Demo')
-        feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
-        num_feasible = len(feasible_sampleset)
+        self.feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
+        num_feasible = len(self.feasible_sampleset)
         if num_feasible > 0:
             best_samples = \
-                feasible_sampleset.truncate(min(10, num_feasible))
+                self.feasible_sampleset.truncate(min(10, num_feasible))
         else:
             warnings.warn("Warning: Did not find feasible solution")
             best_samples = raw_sampleset.truncate(10)
@@ -271,7 +271,7 @@ def run_shop_scheduler(
 
     if verbose:
         print_cqm_stats(model.cqm)
-
+    model_building_time = time() - model_building_start
     solver_start_time = time()
     if use_mip_solver:
         sol = model.call_mip_solver(time_limit=solver_time_limit)
@@ -285,8 +285,12 @@ def run_shop_scheduler(
         print(tabulate([["Completion Time", "Max Possible Make-Span",
                         "Model Building Time (s)", "Solver Call Time (s)",
                         "Total Runtime (s)"],
-                        [model.completion_time, model.max_makespan,
-                        model_building_start, solver_time, time() - model_building_start]],
+                        [model.completion_time, 
+                         model.max_makespan,
+                         int(model_building_time), 
+                         int(solver_time),
+                         int(solver_time +  model_building_time)
+                         ]],
                     headers="firstrow"))
     
     # Write solution to a file.
@@ -342,6 +346,10 @@ if __name__ == "__main__":
                         help='The profile variable to pass to the Sampler. Defaults to None.',
                         default=None)
     
+    parser.add_argument('-max_makespan', type=int,
+                        help='Upperbound on how long the schedule can be; leave empty to auto-calculate an appropriate value.',
+                        default=None)
+    
     
     # Parse input arguments.
     args = parser.parse_args()
@@ -350,10 +358,9 @@ if __name__ == "__main__":
     out_plot_file = args.op
     out_sol_file = args.os
     allow_quadratic_constraints = args.allow_quad
-    import json
-    RESOURCE_NAMES = json.load(open('./src/data/resource_names.json', 'r'))['industrial']
+
     job_data = JobShopData()
-    job_data.load_from_file(input_file, RESOURCE_NAMES)
+    job_data.load_from_file(input_file)
 
     results = run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
                           allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile,
