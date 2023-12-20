@@ -170,6 +170,10 @@ H5, H3 {
     margin: 5px;
 }
 
+#tabs-parent {
+    padding-top:20px;
+}
+
 /*
   ##Device = Most of the Smartphones Mobiles / ipad (Portrait)
   */
