@@ -82,7 +82,7 @@ SCENARIOS = {
 }
 
 MODEL_OPTIONS = {
-    "Quadtratic Model": "QM",
+    "Mixed Integer Quadratic Model": "QM",
     "Mixed Integer Model": "MIP"
 }
 
@@ -450,10 +450,12 @@ def run_optimization_mip(run_click, model, solver, scenario, time_limit):
                 fig = get_empty_figure('Unable to run MIP solver with quadratic constraints')
                 class_name = 'tab-fail'
             else:
+                start = time.time()
                 results = run_shop_scheduler(model_data, 
                                              use_mip_solver=use_mip_solver,
                                              allow_quadratic_constraints=allow_quadratic_constraints,
                                              solver_time_limit=time_limit)
+                end = time.time()
                 if len(results) == 0:
                     fig = get_empty_figure('MIP solver failed to find a solution.')
                     mip_table = generate_output_table(0, 0, 0)
@@ -462,7 +464,7 @@ def run_optimization_mip(run_click, model, solver, scenario, time_limit):
                 else:
                     fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
                     class_name = 'tab-success'
-                    mip_table = generate_output_table(results['Finish'].max(), time_limit, 0)
+                    mip_table = generate_output_table(results['Finish'].max(), time_limit, int(end-start))
                     mip_table_style = {'visibility': 'visible'}
             return fig, mip_table, class_name, mip_table_style  
         else:
