@@ -562,7 +562,7 @@ def generate_gantt_chart(
 
 def generate_output_table(make_span: int, solver_time_limit: int, total_time: int):
     fig = go.Figure(data=[
-                        go.Table(header=dict(values=['Make Span', 'Solver Time Limit', 'Total Time']),
+                        go.Table(header=dict(values=['Make-span', 'Solver Time Limit', 'Total Time']),
                         cells=dict(values=[[make_span], [solver_time_limit], [total_time]]))
                         ]
                     )
