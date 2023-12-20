@@ -216,19 +216,19 @@ def generate_control_card():
     return html.Div(
         id="control-card",
         children=[
-            html.P("Select Scenario"),
+            html.P("Select Scenario", className='control-p'),
             dcc.Dropdown(
                 id="scenario-select",
                 options=scenario_options,
                 value=scenario_options[0]["value"],
             ),
-            html.P("Select Model"),
+            html.P("Select Model", className='control-p'),
             dcc.Dropdown(
                 id="model-select",
                 options=model_options,
                 value=model_options[0]["value"],
             ),
-            html.P("Select Solver"),
+            html.P("Select Solver", className='control-p'),
             dcc.Checklist(
                 id="solver-select",
                 options=solver_options,
@@ -465,14 +465,15 @@ app.layout = html.Div(
                             value='input_tab',
                             className='tab',
                             children=[html.Div(
-                                dcc.Loading(id = "loading-icon-input", children=[ html.Div(
+                                html.Div(
                                 id="unscheduled_gantt_chart_card",
                                 className="gantt-div",
                                 children=[
                                     html.B("Jobs to be Scheduled", className="gantt-title"),
                                     html.Hr(className="gantt-hr"),
-                                    dcc.Graph(id="unscheduld_gantt_chart"),
-                                ],
+                                    dcc.Loading(id = "loading-icon-input", children=[ 
+                                        dcc.Graph(id="unscheduld_gantt_chart"),
+                                    ],
                                 )])
                             )])
                         ,
@@ -481,40 +482,39 @@ app.layout = html.Div(
                                 id='dwave_tab',
                                 className='tab',
                                 children=[html.Div(
-                                    dcc.Loading(id = "loading-icon-dwave", 
-                                        children=[ 
-                                            html.Div(
-                                                id="optimized_gantt_chart_card",
-                                                className="gantt-div",
-                                                children=[
-                                                    html.B("D-Wave Hybrid Solver", className="gantt-title"),
-                                                    html.Hr(className="gantt-hr"),
+                                    html.Div(
+                                        id="optimized_gantt_chart_card",
+                                        className="gantt-div",
+                                        children=[
+                                            html.B("D-Wave Hybrid Solver", className="gantt-title"),
+                                            html.Hr(className="gantt-hr"),
+                                            dcc.Loading(id = "loading-icon-dwave", 
+                                            children=[ 
                                                     dcc.Graph(id="optimized_gantt_chart"),
                                                 ]
-                                                )
-                                            ], 
-                                        type="default"))
-                                 ])
-                    ,
-                    dcc.Tab(label='COIN-OR',
-                            id='mip_tab',
-                            className='tab',
-                            value='mip_tab', 
-                            children=[html.Div(
-                            dcc.Loading(id = "loading-icon-coinor", 
-                                children=[ 
+                                            )
+                                        ]))
+                                    ])
+                                    ,
+                        dcc.Tab(label='COIN-OR',
+                                id='mip_tab',
+                                className='tab',
+                                value='mip_tab', 
+                                children=[html.Div(
                                     html.Div(
                                         id="mip_gantt_chart_card",
                                         className="gantt-div",
                                         children=[
                                             html.B("COIN-OR", className="gantt-title"),
                                             html.Hr(className="gantt-hr"),
-                                            dcc.Graph(id="mip_gantt_chart"),
-                                        ]
-                                    )
-                                ], 
-                                type="default"))])
-                    ])
+                                            dcc.Loading(id = "loading-icon-coinor", 
+                                                children=[ 
+                                                    dcc.Graph(id="mip_gantt_chart"),
+                                                    ]
+                                                )
+                                            ]))
+                                        ])
+                        ])
              ])
     ])
 
