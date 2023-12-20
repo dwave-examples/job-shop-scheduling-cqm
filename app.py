@@ -195,6 +195,9 @@ def get_empty_figure(message):
             }
         ]
     )
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=10, b=10),
+    )
     return fig
 
 
@@ -244,8 +247,6 @@ def generate_control_card():
             max=300,
             step=5,
             ),
-            # html.Br(),
-            # html.Br(),
             html.Div(
                 id="button-group",
                 children=[
@@ -265,11 +266,16 @@ def generate_control_card():
 
 @app.callback(
     Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
-    Output('mip_gantt_chart', 'figure', allow_duplicate=True),   
+    Output('mip_gantt_chart', 'figure', allow_duplicate=True),
+    Output('dwave_summary_table', 'figure', allow_duplicate=True),
+    Output('mip_summary_table', 'figure', allow_duplicate=True),
+    Output('dwave_summary_table', 'style', allow_duplicate=True),
+    Output('mip_summary_table', 'style', allow_duplicate=True),  
     [Input('run-button', 'n_clicks')],
     prevent_initial_call=False
 )
-def load_initial_figures(n_clicks: int) -> tuple[go.Figure, go.Figure]:
+def load_initial_figures(n_clicks: int) -> \
+    tuple[go.Figure, go.Figure, str, str]:
     """This function loads the initial figures for the Gantt charts.
     It will only be used on the initial load; after that this will
     pass PreventUpdate
@@ -284,11 +290,17 @@ def load_initial_figures(n_clicks: int) -> tuple[go.Figure, go.Figure]:
         from being loaded again.
 
     Returns:
-        tuple: A tuple of two Plotly figures.
+        tuple: A tuple of two Plotly figures and two strings. The first
+        figure is the Gantt chart for the D-Wave hybrid solver, the second
+        figure is the Gantt chart for the COIN-OR Branch-and-Cut solver,
+        the first string is the style for the D-Wave summary table, and
+        the second string is the style for the COIN-OR summary table.
     """    
     if n_clicks == 0:
         empty_figure = get_empty_figure('Run optimization to see results')
-        return empty_figure, empty_figure
+        empty_table = generate_output_table(0,0,0)
+        return empty_figure, empty_figure, empty_table, empty_table,\
+            {'visibility': 'hidden'}, {'visibility': 'hidden'}
     else:
         raise PreventUpdate
 
@@ -297,13 +309,15 @@ def load_initial_figures(n_clicks: int) -> tuple[go.Figure, go.Figure]:
     Output("mip_tab", 'className', allow_duplicate=True),
     Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
     Output('mip_gantt_chart', 'figure', allow_duplicate=True),
+    Output('dwave_summary_table', 'style', allow_duplicate=True),
+    Output('mip_summary_table', 'style', allow_duplicate=True),
     [
         Input('run-button', 'n_clicks'),
         Input("cancel-button", "n_clicks")
     ]
 )
 def update_tab_loading_state(run_click: int, cancel_click: int) -> \
-    tuple[str, str, go.Figure, go.Figure]:
+    tuple[str, str, go.Figure, go.Figure, dict, dict]:
     """This function updates the tab loading state after the run button
     or cancel button has been clicked. 
 
@@ -326,20 +340,22 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
     if ctx.triggered_id == "run-button":
         if run_click == 0:
             empty_figure = get_empty_figure('Run optimization to see results')
-            return 'tab', 'tab', empty_figure, empty_figure
+            return 'tab', 'tab', empty_figure, empty_figure, {'visibility': 'hidden'}, {'visibility': 'hidden'}
         else:
             empty_figure = get_empty_figure('Running...')
-            return 'tab-loading', 'tab-loading', empty_figure, empty_figure
+            return 'tab-loading', 'tab-loading', empty_figure, empty_figure, {'visibility': 'hidden'}, {'visibility': 'hidden'}
     elif ctx.triggered_id == "cancel-button":
         if cancel_click > 0:
             empty_figure = get_empty_figure('Last run cancelled prior to completion. Re-run to see results')
-            return 'tab', 'tab', empty_figure, empty_figure
+            return 'tab', 'tab', empty_figure, empty_figure, {'visibility': 'hidden'}, {'visibility': 'hidden'}
     raise PreventUpdate
 
 
 @app.callback(
     Output("optimized_gantt_chart", 'figure'),
+    Output('dwave_summary_table', 'figure'),
     Output('dwave_tab', 'className'),
+    Output('dwave_summary_table', 'style'),
     background=True,
     inputs=[
         Input('run-button', 'n_clicks'),
@@ -383,23 +399,29 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
             filename = SCENARIOS[scenario]
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
             allow_quadratic_constraints = model == 'QM'
+            start = time.time()
             results = run_shop_scheduler(model_data, 
                                          use_mip_solver=False,
                                          allow_quadratic_constraints=allow_quadratic_constraints,
-                                         solver_time_limit=time_limit)         
+                                         solver_time_limit=time_limit)   
+            end = time.time()      
             fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
-            return fig,'tab-success'
+            table = generate_output_table(results['Finish'].max(), time_limit, int(end - start))
+            return fig,table,'tab-success', {'visibility': 'visible'}
         else:
             time.sleep(0.1)
             empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
-            return empty_figure, 'tab-warning'
+            table = generate_output_table()
+            return empty_figure,table,'tab-warning', {'visibility': 'hidden'}
     else:
         raise PreventUpdate
 
 
 @app.callback(
     Output("mip_gantt_chart", 'figure'),
+    Output('mip_summary_table', 'figure'),
     Output('mip_tab', 'className'),
+    Output('mip_summary_table', 'style'),
     [
         Input('run-button', 'n_clicks'),
         State("model-select", "value"),
@@ -434,16 +456,22 @@ def run_optimization_mip(run_click, model, solver, scenario, time_limit):
                                              solver_time_limit=time_limit)
                 if len(results) == 0:
                     fig = get_empty_figure('MIP solver failed to find a solution.')
+                    mip_table = generate_output_table(0, 0, 0)
                     class_name = 'tab-fail'
+                    mip_table_style = {'visibility': 'hidden'}
                 else:
                     fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
                     class_name = 'tab-success'
-            return fig, class_name
+                    mip_table = generate_output_table(results['Finish'].max(), time_limit, 0)
+                    mip_table_style = {'visibility': 'visible'}
+            return fig, mip_table, class_name, mip_table_style  
         else:
             time.sleep(0.1)
             message = 'Select COIN-OR Branch and Cut Solver to run this solver'
             empty_figure = get_empty_figure(message)
-            return empty_figure, 'tab-warning'
+            mip_table = generate_output_table(0, 0, 0)
+            mip_table_style = {'visibility': 'hidden'}
+            return empty_figure, mip_table, 'tab-warning', mip_table_style
     else:
         raise PreventUpdate
 
@@ -508,7 +536,7 @@ def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='
     fig = px.timeline(df, x_start="Start", x_end="Finish", y=y_axis, color=color,
     color_discrete_sequence = px.colors.sample_colorscale(colorscale, [n/(num_items -1) for n in range(num_items)]))
 
-    for idx, fig_data in enumerate(fig.data):
+    for idx, _ in enumerate(fig.data):
         resource = fig.data[idx].name
         data_list = []
         for job in fig.data[idx].y:
@@ -519,6 +547,23 @@ def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='
         fig.data[idx].x = data_list
         
     fig.layout.xaxis.type = 'linear'
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=10, b=10),
+    )
+    return fig
+
+
+def generate_output_table(make_span: int, solver_time_limit: int, total_time: int):
+    fig = go.Figure(data=[
+                        go.Table(header=dict(values=['Make Span', 'Solver Time Limit', 'Total Time']),
+                        cells=dict(values=[[make_span], [solver_time_limit], [total_time]]))
+                        ]
+                    )
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=10, b=10),
+    height=100,
+    autosize=False
+    )
     return fig
 
 
@@ -580,7 +625,8 @@ app.layout = html.Div(
                                             children=[ 
                                                     dcc.Graph(id="optimized_gantt_chart"),
                                                 ]
-                                            )
+                                            ),
+                                            dcc.Graph(id="dwave_summary_table")
                                         ]))
                                     ])
                                     ,
@@ -597,9 +643,10 @@ app.layout = html.Div(
                                             html.Hr(className="gantt-hr"),
                                             dcc.Loading(id = "loading-icon-coinor", 
                                                 children=[ 
-                                                    dcc.Graph(id="mip_gantt_chart"),
+                                                    dcc.Graph(id="mip_gantt_chart")
                                                     ]
-                                                )
+                                                ),
+                                            dcc.Graph(id="mip_summary_table")
                                             ]))
                                         ])
                         ])
