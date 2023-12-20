@@ -497,14 +497,18 @@ def generate_unscheduled_gantt_chart(scenario):
     return fig
 
 
-def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='Resource'):
+def generate_gantt_chart(
+        scenario=None,
+        df=None,
+        y_axis: str='Job',
+        color: str='Resource') -> go.Figure:
     """Generates a Gantt chart of the unscheduled tasks for the given scenario.
 
     Args:
         scenario (str): The name of the scenario; must be a key in SCENARIOS.
 
     Returns:
-        : A Plotly figure object.
+        
 
     """
     if df is None:
@@ -549,6 +553,7 @@ def generate_gantt_chart(scenario=None, df=None, y_axis: str='Job', color: str='
     fig.layout.xaxis.type = 'linear'
     fig.update_layout(
     margin=dict(l=20, r=20, t=10, b=10),
+    xaxis_title="Time Period",
     )
     return fig
 
