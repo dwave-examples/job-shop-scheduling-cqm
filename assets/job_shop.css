@@ -286,6 +286,10 @@ H5, H3 {
     border-top: 2px solid orange !important;
 }
 
+.control-p {
+    margin-top:10px;
+}
+
 .tab-loading {
     overflow: hidden;
     position: relative;
