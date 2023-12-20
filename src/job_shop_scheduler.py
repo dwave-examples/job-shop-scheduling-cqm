@@ -18,7 +18,7 @@ from model_data import JobShopData
 
 class JobShopSchedulingCQM():
     """Builds and solves a Job Shop Scheduling problem using CQM."""
-    def __init__(self, model_data: JobShopData):
+    def __init__(self, model_data: JobShopData, max_makespan: int = None):
         self.model_data = model_data
         self.cqm = None
         self.x = {}
@@ -27,6 +27,9 @@ class JobShopSchedulingCQM():
         self.best_sample = {}
         self.solution = {}
         self.completion_time = 0
+        self.max_makespan = max_makespan
+        if self.max_makespan is None:
+            self.max_makespan = model_data.get_max_makespan()
 
 
     def define_cqm_model(self):
@@ -42,12 +45,12 @@ class JobShopSchedulingCQM():
         """
         # Define make span as an integer variable
         self.makespan = Integer("makespan", lower_bound=0,
-                                upper_bound=model_data.get_max_makespan())
+                                upper_bound=self.max_makespan)
 
         # Define integer variable for start time of using machine i for job j
         self.x = {
             (j, i): Integer('x{}_{}'.format(j, i), lower_bound=0,
-                            upper_bound=model_data.get_max_makespan())
+                            upper_bound=self.max_makespan)
             for j in model_data.jobs for i in model_data.resources}
 
         # Add binary variable which equals to 1 if job j precedes job k on
@@ -114,7 +117,7 @@ class JobShopSchedulingCQM():
         Args:
             model_data (JobShopData): The data for the job shop scheduling
         """        
-        V = model_data.get_max_makespan()
+        V = self.max_makespan
         for j in model_data.jobs:
             for k in model_data.jobs:
                 if j < k:
@@ -228,7 +231,8 @@ def run_shop_scheduler(
     allow_quadratic_constraints: bool = True,
     out_sol_file: str = None,
     out_plot_file: str = None,
-    profile: str = None
+    profile: str = None,
+    max_makespan: int = None
     ) -> pd.DataFrame:
     """This function runs the job shop scheduler on the given data.
 
@@ -254,7 +258,7 @@ def run_shop_scheduler(
     if allow_quadratic_constraints and use_mip_solver:
         raise ValueError("Cannot use quadratic constraints with MIP solver")
     model_building_start = time()
-    model = JobShopSchedulingCQM(model_data=job_data)
+    model = JobShopSchedulingCQM(model_data=job_data, max_makespan=max_makespan)
     model.define_cqm_model()
     model.define_variables(job_data)
     model.add_precedence_constraints(job_data)
@@ -281,7 +285,7 @@ def run_shop_scheduler(
         print(tabulate([["Completion Time", "Max Possible Make-Span",
                         "Model Building Time (s)", "Solver Call Time (s)",
                         "Total Runtime (s)"],
-                        [model.completion_time, job_data.get_max_makespan(),
+                        [model.completion_time, model.max_makespan,
                         model_building_start, solver_time, time() - model_building_start]],
                     headers="firstrow"))
     
@@ -352,4 +356,5 @@ if __name__ == "__main__":
     job_data.load_from_file(input_file, RESOURCE_NAMES)
 
     results = run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
-                          allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile)
+                          allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile,
+                          max_makespan=None)
