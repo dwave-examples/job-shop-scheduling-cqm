@@ -14,11 +14,18 @@
 
 from __future__ import print_function
 
+import argparse
+import time
+
 import dimod
+import pandas as pd
 
 from dwave.system import LeapHybridCQMSampler
 
-from src.model_data import JobShopData
+import sys
+sys.path.append('./src')
+from model_data import JobShopData
+from utils.utils import print_cqm_stats
 
 
 def sum_to_one(*args):
@@ -33,16 +40,20 @@ def get_label(task, time):
 
 
 class JobShopScheduler:
-    def __init__(self, model_data: JobShopData):
+    def __init__(self, model_data: JobShopData, max_makespan: int=None):
         """
         Args:
             model_data: A JobShopData object that holds the data for this job shop 
             scheduling problem.
+            max_makespan: An integer. The maximum makespan for the schedule. If None, 
+            then this is calculated automatically.
 
         """
         self.model_data = model_data
-
-        self._process_data()
+        if max_makespan is None:
+            self.max_makespan = model_data.get_max_makespan()
+        else:
+            self.max_makespan = max_makespan
         self._initialize_variables()
         self.cqm = dimod.ConstrainedQuadraticModel()
         self._add_task_start_constraint()
@@ -53,7 +64,7 @@ class JobShopScheduler:
         self._add_objective()
 
 
-    def solve(self, profile: str=None) -> dict:
+    def solve(self, profile: str=None, time_limit:int=10, verbose: bool=True) -> dict:
         """Solves the job shop scheduling problem.
         
         Args:
@@ -63,8 +74,10 @@ class JobShopScheduler:
             dict: A dictionary of the form {task: (start_time, end_time)} for each task in the
             problem.
         """
+        if verbose:
+            print_cqm_stats(self.cqm)
         sampler = LeapHybridCQMSampler(profile=profile)
-        res = sampler.sample_cqm(self.cqm, time_limit=10, label='Job Shop Demo')
+        res = sampler.sample_cqm(self.cqm, time_limit=time_limit, label='Job Shop Demo BQM')
 
         res.resolve()
         feasible_sampleset = res.filter(lambda d: d.is_feasible)
@@ -79,40 +92,27 @@ class JobShopScheduler:
 
         task_assignments = {}
         for task in self.model_data.get_tasks():
-            for t in range(self.max_time):
+            for t in range(self.max_makespan):
                 if best_feasible[get_label(task, t)] == 1:
                     start_time = t
                     end_time = t + task.duration
                     task_assignments[task] = (start_time, end_time)
                     break
 
-        return task_assignments
+        self.solution = task_assignments
+        df = self.solution_as_dataframe()
+        return df
 
     
     def _initialize_variables(self) -> None:
         """Initialize the variables for the constraint satisfaction problem.
         """
         task_start_vars = {get_label(task, t): dimod.Binary(get_label(task, t)) 
-                        for t in range(self.max_time)
+                        for t in range(self.max_makespan)
                         for task in self.model_data.get_tasks()}
         self.task_start_vars = task_start_vars
 
 
-    def _process_data(self):
-        """Process user input into a format that is more convenient for JobShopScheduler functions.
-        """
-        total_time = 0  # total time of all jobs
-        max_job_time = 0
-
-        for job in self.model_data.jobs:
-            job_time = self.model_data.get_total_job_time(job)
-            total_time += job_time
-
-            # Store the time of the longest running job
-            if job_time > max_job_time:
-                max_job_time = job_time
-
-        self.max_time = total_time
 
 
     def _add_task_start_constraint(self) -> None:
@@ -120,7 +120,7 @@ class JobShopScheduler:
         This adds this constraint to the model requiring that each task be started exactly once.
         '''
         for task in self.model_data.get_tasks():
-            self.cqm.add_constraint(sum(self.task_start_vars[get_label(task, t)] for t in range(self.max_time)) == 1)
+            self.cqm.add_constraint(sum(self.task_start_vars[get_label(task, t)] for t in range(self.max_makespan)) == 1)
         
         
     def _add_precedence_constraint(self) -> None:
@@ -136,8 +136,8 @@ class JobShopScheduler:
                 next_task = job_tasks[precendent_idx + 1]
                 
                 # Forming constraints with the relevant times of the next task
-                for t in range(self.max_time):
-                    for tt in range(0, min(t + precedent_task.duration, self.max_time)):
+                for t in range(self.max_makespan):
+                    for tt in range(0, min(t + precedent_task.duration, self.max_makespan)):
                         self.cqm.add_constraint(
                             self.task_start_vars[get_label(precedent_task, t)] + \
                             self.task_start_vars[get_label(next_task, tt)] + \
@@ -160,8 +160,8 @@ class JobShopScheduler:
                 for task2 in resource_tasks:
                     if task1 == task2:
                         continue
-                    for t in range(self.max_time):
-                        for tt in range(t, min(t + task1.duration, self.max_time)):
+                    for t in range(self.max_makespan):
+                        for tt in range(t, min(t + task1.duration, self.max_makespan)):
                             self.cqm.add_constraint(self.task_start_vars[get_label(task1, t)] + \
                                                     self.task_start_vars[get_label(task2, tt)] + \
                                                     self.task_start_vars[get_label(task1, t)] * self.task_start_vars[get_label(task2, tt)] <= 1)
@@ -199,10 +199,11 @@ class JobShopScheduler:
                 successor_time += task.duration
                 for t in range(successor_time):
                     self.cqm.add_constraint_from_model(
-                        self.task_start_vars[get_label(task, self.max_time - t - 1)],
+                        self.task_start_vars[get_label(task, self.max_makespan - t - 1)],
                         "==",
                         0,
-                        label='succession_fixing_' + str(task) + '_' + str(self.max_time - t - 1))
+                        label='succession_fixing_' + str(task) + '_' + str(self.max_makespan - t - 1))
+
 
     def _add_objective(self):
         """This function adds the objective function to the constrained quadratic model.
@@ -211,10 +212,23 @@ class JobShopScheduler:
             sum(
                 sum(t * self.task_start_vars[get_label(task, t)] \
                     for task in self.model_data.get_last_tasks()
-                    ) for t in range(self.max_time)
+                    ) for t in range(self.max_makespan)
                 )
             )
         
+
+    def solution_as_dataframe(self) -> pd.DataFrame:
+        """This function returns the solution as a pandas DataFrame
+
+        Returns:
+            pd.DataFrame: A pandas DataFrame containing the solution
+        """        
+        df_rows = []
+        for (task), (start, end) in self.solution.items():
+            df_rows.append([task.job, task, start, end, task.resource])
+        df = pd.DataFrame(df_rows, columns=['Job', 'Task', 'Start', 'Finish', 'Resource'])
+        return df
+    
     # def _model_end(self):
     #     """This function adds a variable to the constrained quadratic model that
     #     represents the time at which the last task is completed.
@@ -235,3 +249,64 @@ class JobShopScheduler:
     #     self.cqm.set_objective(
     #         sum(t * self.model_end_vars[t] for t in range(self.max_time))
     #     )
+        
+
+
+if __name__ == "__main__":
+    """Modeling and solving Job Shop Scheduling using CQM solver."""
+
+
+    # Instantiate the parser
+    parser = argparse.ArgumentParser(
+        description='Job Shop Scheduling Using LeapHybridCQMSampler',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('-instance', type=str,
+                        help='path to the input instance file; ',
+                        default='input/instance5_5.txt')
+
+    parser.add_argument('-tl', type=int,
+                        help='time limit in seconds')
+
+    parser.add_argument('-os', type=str,
+                        help='path to the output solution file',
+                        default='output/solution.txt')
+
+    parser.add_argument('-op', type=str,
+                        help='path to the output plot file',
+                        default='output/schedule.png')
+    
+    parser.add_argument('-use_mip_solver', action='store_true',
+                        help='Whether to use the MIP solver instead of the CQM solver')
+    
+    parser.add_argument('-verbose', action='store_true', default=True,
+                        help='Whether to print verbose output')
+    
+    parser.add_argument('-allow_quad', action='store_true',
+                        help='Whether to allow quadratic constraints')
+    
+    parser.add_argument('-profile', type=str,
+                        help='The profile variable to pass to the Sampler. Defaults to None.',
+                        default=None)
+    
+    parser.add_argument('-max_makespan', type=int,
+                        help='Upperbound on how long the schedule can be; leave empty to auto-calculate an appropriate value.',
+                        default=None)
+    
+    
+    # Parse input arguments.
+    args = parser.parse_args()
+    input_file = args.instance
+    time_limit = args.tl
+    out_plot_file = args.op
+    out_sol_file = args.os
+    allow_quadratic_constraints = args.allow_quad
+
+    job_data = JobShopData()
+    job_data.load_from_file(input_file)
+
+    jss = JobShopScheduler(job_data, max_makespan=args.max_makespan)
+    res = jss.solve(time_limit=time_limit, profile=args.profile)
+
+    import pdb
+    pdb.set_trace()
