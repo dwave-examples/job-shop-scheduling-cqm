@@ -370,7 +370,7 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
     prevent_initial_call=True
 )
 def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str, time_limit: int) \
-    -> tuple[go.Figure, str]:
+    -> tuple[go.Figure, go.Figure, str, str]:
     """This function runs the optimization using the D-Wave hybrid solver.
 
     Args:
@@ -387,8 +387,9 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
             from running.
 
     Returns:
-        tuple: A tuple of two objects: the Plotly figure for the Gantt
-            chart and the class name for the tab.
+        tuple: A tuple of four objects: the Plotly figure for the Gantt
+            chart, the Plotly figure for the output table, the class name
+            for the tab, and the style for the output table.
     """    
     if run_click == 0 or ctx.triggered_id != "run-button":
         empty_figure = get_empty_figure('Run optimization to see results')
@@ -434,7 +435,32 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True
 )
-def run_optimization_mip(run_click, model, solver, scenario, time_limit):
+def run_optimization_mip(run_click: int,
+                         model: str,
+                         solver: str,
+                         scenario: str,
+                         time_limit: int) \
+                         -> tuple[go.Figure, go.Figure, str, str]:
+    """This function runs the optimization using the COIN-OR Branch-and-Cut solver.
+
+    Args:
+        run_click (int): The number of times the run button has been
+            clicked.
+        model (str): The model to use for the optimization.
+        solver (str): The solver to use for the optimization.
+        scenario (str): The scenario to use for the optimization.
+        time_limit (int): The time limit for the optimization.
+
+    Raises:
+        PreventUpdate: If this was not trigged by a run-button click,
+            this will raise PreventUpdate to prevent the optimization
+            from running.
+
+    Returns:
+        tuple: A tuple of four objects: the Plotly figure for the Gantt
+            chart, the Plotly figure for the output table, the class name
+            for the tab, and the style for the output table.
+    """    
     if run_click == 0:
         empty_figure = get_empty_figure('Run optimization to see results')
         return empty_figure, 'tab'
@@ -446,9 +472,11 @@ def run_optimization_mip(run_click, model, solver, scenario, time_limit):
             use_mip_solver = True
             allow_quadratic_constraints = model == 'QM'
             if allow_quadratic_constraints:
-                time.sleep(0.1)
+                time.sleep(0.1) #sleep to allow the loading icon to appear first
                 fig = get_empty_figure('Unable to run MIP solver with quadratic constraints')
                 class_name = 'tab-fail'
+                mip_table = generate_output_table(0, 0, 0)
+                mip_table_style = {'visibility': 'hidden'}
             else:
                 start = time.time()
                 results = run_shop_scheduler(model_data, 
@@ -468,7 +496,7 @@ def run_optimization_mip(run_click, model, solver, scenario, time_limit):
                     mip_table_style = {'visibility': 'visible'}
             return fig, mip_table, class_name, mip_table_style  
         else:
-            time.sleep(0.1)
+            time.sleep(0.1) #sleep to allow the loading icon to appear first
             message = 'Select COIN-OR Branch and Cut Solver to run this solver'
             empty_figure = get_empty_figure(message)
             mip_table = generate_output_table(0, 0, 0)
@@ -478,22 +506,20 @@ def run_optimization_mip(run_click, model, solver, scenario, time_limit):
         raise PreventUpdate
 
 
-
 @app.callback(
     Output('unscheduld_gantt_chart', 'figure'),
     [
         Input("scenario-select", "value"),
     ]
 )
-def generate_unscheduled_gantt_chart(scenario):
+def generate_unscheduled_gantt_chart(scenario: str) -> go.Figure:
     """Generates a Gantt chart of the unscheduled tasks for the given scenario.
 
     Args:
         scenario (str): The name of the scenario; must be a key in SCENARIOS.
 
     Returns:
-        : A Plotly figure object.
-
+        go.Figure: A Plotly figure object with the input data
     """
     fig = generate_gantt_chart(scenario=scenario, y_axis='Job', color='Resource')
     return fig
@@ -510,8 +536,7 @@ def generate_gantt_chart(
         scenario (str): The name of the scenario; must be a key in SCENARIOS.
 
     Returns:
-        
-
+        go.Figure: A Plotly figure object.
     """
     if df is None:
         filename = SCENARIOS[scenario]
@@ -560,7 +585,21 @@ def generate_gantt_chart(
     return fig
 
 
-def generate_output_table(make_span: int, solver_time_limit: int, total_time: int):
+def generate_output_table(make_span: int, 
+                          solver_time_limit: int, 
+                          total_time: int) -> go.Figure:
+    """This function generates an output table for the optimization results.
+    The table will contain the make-span, solver time limit, and total time
+    for the optimization.
+
+    Args:
+        make_span (int): The make-span for the optimization.
+        solver_time_limit (int): The solver time limit for the optimization.
+        total_time (int): The total time for the optimization.
+
+    Returns:
+        go.Figure: A Plotly figure object containing the output table.
+    """    
     fig = go.Figure(data=[
                         go.Table(header=dict(values=['Make-span', 'Solver Time Limit', 'Total Time']),
                         cells=dict(values=[[make_span], [solver_time_limit], [total_time]]))
