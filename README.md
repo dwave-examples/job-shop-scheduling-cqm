@@ -22,22 +22,23 @@ can be solved using a Leap hybrid CQM solver.
 
 To run the demo, type:
 
-    python job_shop_scheduler.py
+    python job_shop_scheduler.py [-h] [-instance INSTANCE] [-tl TL] [-os OS] [-op OP] [-use_mip_solver] [-verbose] [-allow_quad] [-profile PROFILE] [-max_makespan MAX_MAKESPAN]
 
-The demo program solves a 5 * 5 job shop scheduling problem
-(5 jobs and 5 machines) defined by `input/instance_5_5.txt`. The solution
-returned by the Leap hybrid CQM solver is then saved to `solution.txt` and the 
-scheduling plot is saved to `schedule.png`.
+This will call the job shop scheduling algorithm for the input instance file. Command line arguments are defined as:
+- -h: Show a help message and exit.
+- -instance: Specify the instance file for the job shop scheduling problem.
+- -tl: The solver time limit for the problem.
+- -os: Path to the output solution file.
+- -op: Path to the output plot file
+- -use_mip_solver: Use an open-source Mixed Integer Programming solver instead of the D-Wave hybrid solver
+- -verbose: Enable verbose output, showing more detailed information during execution.
+- -allow_quad: Whether to allow quadratic constraints in the model; thisi can only be done when use_mip_solver is set to False.
+- -profile: Set a profile name for the D-Wave hybrid solver.
+- -max_makespan: Manually set a maximum makespan for the scheduling problem. If not input, then the algorithm will generate a max_makespan
 
-To solve a different problem instance, type:
+There are several instances pre-populated under `input` folder. Some of the instances were randomly generated using `utils/jss_generator.py` as discussed under the [Problem generator](#Generating-Problem-Instances) section.
 
-    python job_shop_scheduler.py -instance <path to your problem file>
-
-There are several instances under `input` folder. Alternatively, a random 
-instance file could be generated using `utils/jss_generator.py` as discussed 
-under the [Problem generator](#Generating-Problem-Instances) section.
-
-This is an example of a JSS input instance file for a 5 * 5 problem:
+Other instances were pulled from [E. Taillard's list] of benchmarking instances. If the string "taillard" is contained in the filename, the model will expect the input file to match the format used by Taillard. Otherwse, the following format is expected:
 
 ```
 #Num of jobs: 5 
@@ -62,13 +63,6 @@ Note that:
  which enforces a one-to-one relationship between tasks and machines, therefore,
 the number of tasks per job is always equal to the number of machines in the problem.
 
-These additional parameters can be passed to `job_shop_scheduler.py`:
-
-    -h, --help          show this help message and exit
-    -instance INSTANCE  path to the input instance file; (default: input/instance5_5.txt)
-    -tl TL              time limit in seconds (default: None)
-    -os OS              path to the output solution file (default: solution.txt)
-    -op OP              path to the output plot file (default: shcedule.png)
 
 The program produces a solution schedule like this:
 
@@ -156,15 +150,14 @@ In addition, using this quadratic equation eliminates the need for using the so 
 `Big M` value to activate or relax constraint
 (https://en.wikipedia.org/wiki/Big_M_method). 
 
-The proposed quadratic equation fulfills the same behaviour as the linear
-constraints:
+The proposed quadratic equation fulfills the same behaviour as the linear constraints:
+
 There are two cases:
 - if `y_j,k,i = 0` job `j` is processed after job `k`:  
   ![equation2_1](_static/eq2_1.png)   
 - if `y_j,k,i = 1` job `k` is processed after job `j`:  
   ![equation2_2](_static/eq2_2.png)   
-  Since these equations are applied to every pair of jobs,
-  they guarantee that the jobs don't overlap on a machine.
+  Since these equations are applied to every pair of jobs, they guarantee that the jobs don't overlap on a machine. If -allow_quad is set to False, this mixed integer formulation of this constraint will be used.
 
 #### Make-Span Constraint 
 The make-span of a JSS problem can be calculated by obtaining the maximum 
@@ -187,3 +180,5 @@ Volume 73, 2016, Pages 165-173.
 ## License
 
 Released under the Apache License 2.0. See [LICENSE](LICENSE) file.
+
+[E. Taillard's list]: http://mistic.heig-vd.ch/taillard/problemes.dir/ordonnancement.dir/ordonnancement.html
