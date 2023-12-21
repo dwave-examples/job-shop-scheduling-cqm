@@ -1,5 +1,5 @@
 '''
-This file is copied from apps/dash-clinical-analytics/app.py under the following license
+This file is forked from apps/dash-clinical-analytics/app.py under the following license
 
 MIT License
 
@@ -30,21 +30,6 @@ Apache License, Version 2.0
 
 '''
 
-'''
-TODO:
-1) connect the run button to the optimization function (x)
-2) connect the reset button to the reset function (z)
-3) split the output onto a separate tab (x)
-4) add option to switch solver / run multiple solvers against eachother (x)
-5) add benchmarking results from (Ku & Beck 2016) (likely won't add this)
-6) connect output table to live results (x)
-7) add loading bar to indicate optimization is running (x)
-8) sort y-axis alphabetically (x)
-9) run multiple models in parallel (x)
-10) add timer while loading
-11) same x-axis for us and COIN-OR
-12) finish get_empty_figure() func (x)
-'''
 import json
 import time
 
@@ -53,11 +38,9 @@ from dash import dcc, html, ctx, DiskcacheManager
 from dash.dependencies import Input, Output, ClientsideFunction, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
-from plotly.colors import n_colors
 import plotly.express as px
 import pandas as pd
 import pathlib
-## Diskcache
 import diskcache
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
@@ -67,9 +50,6 @@ from src.job_shop_scheduler import run_shop_scheduler
 
 #built-in color scales at https://plotly.com/python/builtin-colorscales/y
 
-PRIMARY_COLOR = 'FFA143'
-LOADING_COLOR = 'yellow'
-SUCCESS_COLOR = 'green'
 
 SCENARIOS = {
     '3x3': "instance3_3.txt",
