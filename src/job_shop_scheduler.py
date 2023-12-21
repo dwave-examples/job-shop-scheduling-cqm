@@ -15,7 +15,6 @@ import utils.mip_solver as mip_solver
 from model_data import JobShopData
 
 
-
 class JobShopSchedulingCQM():
     """Builds and solves a Job Shop Scheduling problem using CQM."""
     def __init__(self, model_data: JobShopData, max_makespan: int = None):
@@ -48,10 +47,13 @@ class JobShopSchedulingCQM():
                                 upper_bound=self.max_makespan)
 
         # Define integer variable for start time of using machine i for job j
-        self.x = {
-            (j, i): Integer('x{}_{}'.format(j, i), lower_bound=0,
-                            upper_bound=self.max_makespan)
-            for j in model_data.jobs for i in model_data.resources}
+        self.x = {}
+        for job in model_data.jobs:
+            for resource in model_data.resources:
+                task = model_data.get_resource_job_tasks(job=job, resource=resource)
+                lb, ub = model_data.get_task_time_bounds(task, self.max_makespan)
+                self.x[(job, resource)] = Integer('x{}_{}'.format(job, resource), lower_bound=lb,
+                                         upper_bound=ub)
 
         # Add binary variable which equals to 1 if job j precedes job k on
         # machine i
@@ -336,7 +338,7 @@ if __name__ == "__main__":
     parser.add_argument('-use_mip_solver', action='store_true',
                         help='Whether to use the MIP solver instead of the CQM solver')
     
-    parser.add_argument('-verbose', action='store_true',
+    parser.add_argument('-verbose', action='store_true', default=True,
                         help='Whether to print verbose output')
     
     parser.add_argument('-allow_quad', action='store_true',
@@ -362,6 +364,9 @@ if __name__ == "__main__":
     job_data = JobShopData()
     job_data.load_from_file(input_file)
 
-    results = run_shop_scheduler(job_data, time_limit, verbose=True, use_mip_solver=args.use_mip_solver,
+    results = run_shop_scheduler(job_data, time_limit, verbose=args.verbose, use_mip_solver=args.use_mip_solver,
                           allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile,
-                          max_makespan=None)
+                          max_makespan=args.max_makespan)
+
+    import pdb
+    pdb.set_trace()

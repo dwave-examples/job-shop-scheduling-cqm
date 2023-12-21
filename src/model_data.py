@@ -273,6 +273,24 @@ class JobShopData:
         return len(self._resources)
     
 
+    def get_task_time_bounds(self, task, make_span: int) -> tuple[int, int]:
+        """Returns the minimum and maximum possible starting
+        times for this task, given that prior tasks for the job
+        must be completed first and subsequent tasks for the job
+        must be completed after.
+        
+        Args:
+            make_span (int): the maximum time needed to complete all jobs
+        """
+        job_tasks = [x for x in self.get_tasks() if x.job == task.job]
+        task_position = self.get_task_position(task)
+        prior_tasks = job_tasks[:task_position]
+        subsequent_tasks = job_tasks[task_position + 1:]
+        prior_time = sum(x.duration for x in prior_tasks)
+        subsequent_time = sum(x.duration for x in subsequent_tasks)
+        return (prior_time, make_span - subsequent_time - task.duration)
+    
+
     def get_resource_tasks(self, resource: str) -> list[Task]:
         """This function returns all Tasks that require a given resource.
 
