@@ -308,7 +308,6 @@ def run_shop_scheduler(
     return df
 
 
-
 if __name__ == "__main__":
     """Modeling and solving Job Shop Scheduling using CQM solver."""
 
@@ -367,6 +366,3 @@ if __name__ == "__main__":
     results = run_shop_scheduler(job_data, time_limit, verbose=args.verbose, use_mip_solver=args.use_mip_solver,
                           allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile,
                           max_makespan=args.max_makespan)
-
-    import pdb
-    pdb.set_trace()
