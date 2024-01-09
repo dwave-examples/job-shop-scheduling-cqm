@@ -230,7 +230,7 @@ def generate_control_card():
             html.Div(
                 id="button-group",
                 children=[
-                    html.Button(id="run-button", children="Run Optimization", className='run-button', n_clicks=0),
+                    html.Button(id="run-button", children="Run Optimization", className='run-button', n_clicks=0, disabled=False),
                     html.Button(
                         id="cancel-button",
                         children="Cancel Optimization",
@@ -345,7 +345,7 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
         State("solver_time_limit", "value"),
     ],
     running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'}),
-             (Output("run-button", "style"), {"visibility": "hidden"}, {'visibility': 'visible'})],
+             (Output("run-button", "disabled"), True, False)],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True
 )

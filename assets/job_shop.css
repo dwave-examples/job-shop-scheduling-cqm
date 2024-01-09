@@ -259,7 +259,23 @@ H5, H3 {
     font-size: 1rem;
     background-color: #2a7de1;
     color: white;
+    margin-right:5px;
 }
+
+.run-button:disabled {
+    font-size: 1rem;
+    background-color: gray;
+    color: white;
+    opacity: 0.5;
+}
+
+.run-button:disabled:hover {
+    font-size: 1rem;
+    background-color: gray;
+    color: white;
+    opacity: 0.5;
+}
+
 
 .run-button:hover {
     background-color: #074c91;
