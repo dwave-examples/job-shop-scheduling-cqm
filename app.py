@@ -381,10 +381,17 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
             allow_quadratic_constraints = model == 'QM'
             start = time.time()
+            if time_limit <= 5: 
+                greedy_multiplier = 1.5
+            elif time_limit <= 10:
+                greedy_multiplier = 1.4
+            else:
+                greedy_multiplier = 1.2
             results = run_shop_scheduler(model_data, 
                                          use_mip_solver=False,
                                          allow_quadratic_constraints=allow_quadratic_constraints,
-                                         solver_time_limit=time_limit)   
+                                         solver_time_limit=time_limit,
+                                         greedy_multiplier=greedy_multiplier)
             end = time.time()      
             fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
             table = generate_output_table(results['Finish'].max(), time_limit, int(end - start))

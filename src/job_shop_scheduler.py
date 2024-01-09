@@ -12,12 +12,34 @@ sys.path.append('./src')
 from utils.utils import print_cqm_stats, write_solution_to_file
 import utils.plot_schedule as job_plotter
 import utils.mip_solver as mip_solver
+from utils.greedy import GreedyJobShop
 from model_data import JobShopData
 
 
+def generate_greedy_makespan(job_data: JobShopData, num_samples: int=100) -> int:
+    """This function generates random samples using the greedy algorithm; it will keep the
+    top keep_pct percent of samples.
+
+    Args:
+        job_data (JobShopData): An instance of the JobShopData class
+        num_samples (int, optional): The number of samples to take (number of times
+            the GreedyJobShop algorithm is run). Defaults to 100.
+
+    Returns:
+        int: The best makespan found by the greedy algorithm.
+    """    
+    solutions = []
+    for _ in range(num_samples):
+        greedy = GreedyJobShop(job_data)
+        task_assignments = greedy.solve()
+        solutions.append(max([v[1] for v in task_assignments.values()]))
+    best_greedy = min(solutions)
+
+    return best_greedy
+
 class JobShopSchedulingCQM():
     """Builds and solves a Job Shop Scheduling problem using CQM."""
-    def __init__(self, model_data: JobShopData, max_makespan: int = None):
+    def __init__(self, model_data: JobShopData, max_makespan: int = None, greedy_multiplier: float=1.4):
         self.model_data = model_data
         self.cqm = None
         self.x = {}
@@ -28,7 +50,8 @@ class JobShopSchedulingCQM():
         self.completion_time = 0
         self.max_makespan = max_makespan
         if self.max_makespan is None:
-            self.max_makespan = model_data.get_max_makespan()
+            self.max_makespan = generate_greedy_makespan(model_data) * greedy_multiplier
+            # self.max_makespan = model_data.get_max_makespan()
 
 
     def define_cqm_model(self):
@@ -161,6 +184,8 @@ class JobShopSchedulingCQM():
             https://docs.ocean.dwavesys.com/en/stable/docs_cloud/reference/generated/dwave.cloud.config.load_config.html#dwave.cloud.config.load_config
         """
         sampler = LeapHybridCQMSampler(profile=profile)
+        min_time_limit = sampler.min_time_limit(self.cqm)
+        time_limit = max(min_time_limit, time_limit)
         raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit, label='Job Shop Demo')
         self.feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
         num_feasible = len(self.feasible_sampleset)
@@ -234,7 +259,8 @@ def run_shop_scheduler(
     out_sol_file: str = None,
     out_plot_file: str = None,
     profile: str = None,
-    max_makespan: int = None
+    max_makespan: int = None,
+    greedy_multiplier: float=1.4
     ) -> pd.DataFrame:
     """This function runs the job shop scheduler on the given data.
 
@@ -251,6 +277,10 @@ def run_shop_scheduler(
         out_sol_file (str, optional): Path to the output solution file. Defaults to None.
         out_plot_file (str, optional): Path to the output plot file. Defaults to None.
         profile (str, optional): The profile variable to pass to the Sampler. Defaults to None.
+        max_makespan (int, optional): Upperbound on how long the schedule can be; leave empty to
+            auto-calculate an appropriate value. Defaults to None.
+        greedy_multiplier (float, optional): The multiplier to apply to the greedy makespan, 
+            to get the upperbound on the makespan. Defaults to 1.4.
 
     Returns:
         pd.DataFrame: A DataFrame that has the following columns: Task, Start, Finish, and
@@ -260,7 +290,7 @@ def run_shop_scheduler(
     if allow_quadratic_constraints and use_mip_solver:
         raise ValueError("Cannot use quadratic constraints with MIP solver")
     model_building_start = time()
-    model = JobShopSchedulingCQM(model_data=job_data, max_makespan=max_makespan)
+    model = JobShopSchedulingCQM(model_data=job_data, max_makespan=max_makespan, greedy_multiplier=greedy_multiplier)
     model.define_cqm_model()
     model.define_variables(job_data)
     model.add_precedence_constraints(job_data)
@@ -284,7 +314,7 @@ def run_shop_scheduler(
 
     if verbose:
         print(" \n" + "=" * 55 + "SOLUTION RESULTS" + "=" * 55)
-        print(tabulate([["Completion Time", "Max Possible Make-Span",
+        print(tabulate([["Completion Time", "Max Make-Span",
                         "Model Building Time (s)", "Solver Call Time (s)",
                         "Total Runtime (s)"],
                         [model.completion_time, 
