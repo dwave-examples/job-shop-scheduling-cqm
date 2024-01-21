@@ -222,7 +222,7 @@ def generate_control_card():
             dcc.Input(
             id="solver_time_limit",
             type='number',
-            value=20,
+            value=5,
             min=5,
             max=300,
             step=5,
