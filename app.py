@@ -393,7 +393,7 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
         else:
             time.sleep(0.1)
             empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
-            table = generate_output_table()
+            table = generate_output_table(0, 0, 0)
             return empty_figure,table,'tab-warning', {'visibility': 'hidden'}
     else:
         raise PreventUpdate
