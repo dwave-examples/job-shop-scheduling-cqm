@@ -62,8 +62,8 @@ SCENARIOS = {
 }
 
 MODEL_OPTIONS = {
+    "Mixed Integer Model": "MIP",
     "Mixed Integer Quadratic Model": "QM",
-    "Mixed Integer Model": "MIP"
 }
 
 SOLVER_OPTIONS = {
