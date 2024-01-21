@@ -193,7 +193,7 @@ class JobShopSchedulingCQM():
             best_samples = \
                 self.feasible_sampleset.truncate(min(10, num_feasible))
         else:
-            warnings.warn("Warning: Did not find feasible solution")
+            warnings.warn("Warning: CQM did not find feasible solution")
             best_samples = raw_sampleset.truncate(10)
 
         print(" \n" + "=" * 30 + "BEST SAMPLE SET" + "=" * 30)
@@ -225,7 +225,7 @@ class JobShopSchedulingCQM():
         sol = solver.sample_cqm(cqm=self.cqm, time_limit=time_limit)
         self.solution = {}
         if len(sol) == 0:
-            warnings.warn("Warning: Did not find feasible solution")
+            warnings.warn("Warning: MIP did not find feasible solution")
             return self.solution
         best_sol = sol.first.sample
         
