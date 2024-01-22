@@ -73,6 +73,8 @@ class MIPCQMSolver:
         """
         model = mip.Model()
 
+        model.verbose = 0
+
         variable_map: typing.Dict[dimod.typing.Variable, mip.Var] = dict()
         for v in cqm.variables:
             variable_map[v] = model.add_var(

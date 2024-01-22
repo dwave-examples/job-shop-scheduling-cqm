@@ -62,8 +62,8 @@ SCENARIOS = {
 }
 
 MODEL_OPTIONS = {
+    "Mixed Integer Model": "MIP",
     "Mixed Integer Quadratic Model": "QM",
-    "Mixed Integer Model": "MIP"
 }
 
 SOLVER_OPTIONS = {
@@ -222,7 +222,7 @@ def generate_control_card():
             dcc.Input(
             id="solver_time_limit",
             type='number',
-            value=20,
+            value=5,
             min=5,
             max=300,
             step=5,
@@ -381,17 +381,11 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
             allow_quadratic_constraints = model == 'QM'
             start = time.time()
-            if time_limit <= 5: 
-                greedy_multiplier = 1.5
-            elif time_limit <= 10:
-                greedy_multiplier = 1.4
-            else:
-                greedy_multiplier = 1.2
             results = run_shop_scheduler(model_data, 
                                          use_mip_solver=False,
                                          allow_quadratic_constraints=allow_quadratic_constraints,
                                          solver_time_limit=time_limit,
-                                         greedy_multiplier=greedy_multiplier)
+                                         )
             end = time.time()      
             fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
             table = generate_output_table(results['Finish'].max(), time_limit, int(end - start))
@@ -399,7 +393,7 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
         else:
             time.sleep(0.1)
             empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
-            table = generate_output_table()
+            table = generate_output_table(0, 0, 0)
             return empty_figure,table,'tab-warning', {'visibility': 'hidden'}
     else:
         raise PreventUpdate

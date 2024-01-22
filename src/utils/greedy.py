@@ -21,7 +21,7 @@ class GreedyJobShop:
         self.model_data = model_data
     
 
-    def solve(self, skip_probability: float = 0.1) -> dict:
+    def solve(self, skip_probability: float = 0.1, seed : int = 42) -> dict:
         '''
         This solves the job shop scheduling problem using the 
         following strategy:
@@ -64,6 +64,8 @@ class GreedyJobShop:
                     resource_schedule[i+1]['start'] - max(min_start, resource_schedule[i]['finish']) >= gap_duration:
                     return max(min_start, resource_schedule[i]['finish']), i+1
             return max(min_start, resource_schedule[-1]['finish']), len(resource_schedule)
+
+        rng = np.random.default_rng(seed)
   
         self.resource_schedules = {resource: [] for resource in self.model_data.resources}
         self.job_schedules = {job: [] for job in self.model_data.jobs}
@@ -72,7 +74,7 @@ class GreedyJobShop:
         unfinished_jobs = [x for x in self.model_data.jobs]
         remaining_task_times = {job: self.model_data.get_total_job_time(job) for job in self.model_data.jobs}
         unfinished_jobs = np.array([x for x in self.model_data.jobs])
-        np.random.shuffle(unfinished_jobs)
+        rng.shuffle(unfinished_jobs)
         not_yet_finished = np.ones(len(unfinished_jobs))
         idx = 0
 
@@ -83,7 +85,7 @@ class GreedyJobShop:
                 idx += 1
                 continue
 
-            if np.random.rand() < skip_probability:
+            if rng.uniform() < skip_probability:
                 idx += 1
                 continue
             task = self.model_data.job_tasks[job][self.last_task_scheduled[job] + 1]
