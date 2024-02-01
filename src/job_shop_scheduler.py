@@ -1,9 +1,15 @@
+'''
+This module contains the JobShopSchedulingCQM class, which is used to build and 
+solve a Job Shop Scheduling problem using CQM.
+
+'''
+
 from time import time
 import warnings
 
 from tabulate import tabulate
 import argparse
-from dimod import ConstrainedQuadraticModel, Binary, Integer, SampleSet
+from dimod import ConstrainedQuadraticModel, Binary, Integer
 from dwave.system import LeapHybridCQMSampler
 import pandas as pd
 
@@ -38,7 +44,28 @@ def generate_greedy_makespan(job_data: JobShopData, num_samples: int=100) -> int
     return best_greedy
 
 class JobShopSchedulingCQM():
-    """Builds and solves a Job Shop Scheduling problem using CQM."""
+    """Builds and solves a Job Shop Scheduling problem using CQM.
+    
+    Args:
+        model_data (JobShopData): The data for the job shop scheduling
+        max_makespan (int, optional): The maximum makespan allowed for the schedule. 
+            If None, the makespan will be set to a value that is greedy_mulitiplier 
+            times the makespan found by the greedy algorithm. Defaults to None.
+        greedy_multiplier (float, optional): The multiplier to apply to the greedy makespan, 
+            to get the upperbound on the makespan. Defaults to 1.4.
+
+    Attributes:
+        model_data (JobShopData): The data for the job shop scheduling
+        cqm (ConstrainedQuadraticModel): The CQM model
+        x (dict): A dictionary of the integer variables for the start time of using machine i for job j
+        y (dict): A dictionary of the binary variables which equals to 1 if job j precedes job k on machine i
+        makespan (Integer): The makespan variable
+        best_sample (dict): The best sample found by the CQM solver
+        solution (dict): The solution to the problem
+        completion_time (int): The completion time of the schedule
+        max_makespan (int): The maximum makespan allowed for the schedule
+
+    """
     def __init__(self, model_data: JobShopData, max_makespan: int = None, greedy_multiplier: float=1.4):
         self.model_data = model_data
         self.cqm = None
@@ -51,19 +78,23 @@ class JobShopSchedulingCQM():
         self.max_makespan = max_makespan
         if self.max_makespan is None:
             self.max_makespan = generate_greedy_makespan(model_data) * greedy_multiplier
-            # self.max_makespan = model_data.get_max_makespan()
 
 
-    def define_cqm_model(self):
+    def define_cqm_model(self) -> None:
         """Define CQM model."""
         self.cqm = ConstrainedQuadraticModel()
 
 
-    def define_variables(self, model_data: JobShopData):
+    def define_variables(self, model_data: JobShopData) -> None:
         """Define CQM variables.
 
         Args:
             model_data: a JobShopData data class
+
+        Modifies:
+            self.x: a dictionary of integer variables for the start time of using machine i for job j
+            self.y: a dictionary of binary variables which equals to 1 if job j precedes job k on machine i
+            self.makespan: an integer variable for the makespan of the schedule
         """
         # Define make span as an integer variable
         self.makespan = Integer("makespan", lower_bound=0,
@@ -88,7 +119,11 @@ class JobShopSchedulingCQM():
 
     def define_objective_function(self) -> None:
         """Define objective function, which is to minimize
-        the makespan of the schedule."""
+        the makespan of the schedule.
+        
+        Modifies:
+            self.cqm: adds the objective function to the CQM model
+        """
         self.cqm.set_objective(self.makespan)
 
 
@@ -98,8 +133,10 @@ class JobShopSchedulingCQM():
 
         Args:
             model_data: a JobShopData data class
-        """
 
+        Modifies:
+            self.cqm: adds precedence constraints to the CQM model
+        """
         for job in model_data.jobs:  # job
             for prev_task, curr_task in zip(model_data.job_tasks[job][:-1], model_data.job_tasks[job][1:]):
                 machine_curr = curr_task.resource
@@ -116,6 +153,9 @@ class JobShopSchedulingCQM():
 
          Args:
              model_data: a JobShopData data class
+
+        Modifies:
+            self.cqm: adds quadratic constraints to the CQM model
         """
         for j in model_data.jobs:
             for k in model_data.jobs:
@@ -141,6 +181,9 @@ class JobShopSchedulingCQM():
 
         Args:
             model_data (JobShopData): The data for the job shop scheduling
+
+        Modifies:
+            self.cqm: adds disjunctive constraints to the CQM model
         """        
         V = self.max_makespan
         for j in model_data.jobs:
@@ -164,6 +207,9 @@ class JobShopSchedulingCQM():
 
         Args:
             model_data: a JobShopData data class
+
+        Modifies:
+            self.cqm: adds the makespan constraint to the CQM model
         """
         for job in model_data.jobs:
             last_job_task = model_data.job_tasks[job][-1]
@@ -182,10 +228,17 @@ class JobShopSchedulingCQM():
             profile (str): The profile variable to pass to the Sampler. Defaults to None.
             See documentation at 
             https://docs.ocean.dwavesys.com/en/stable/docs_cloud/reference/generated/dwave.cloud.config.load_config.html#dwave.cloud.config.load_config
+
+        Modifies:
+            self.feasible_sampleset: a SampleSet object containing the feasible solutions
+            self.best_sample: the best sample found by the CQM solver
+            self.solution: the solution to the problem
+            self.completion_time: the completion time of the schedule
         """
         sampler = LeapHybridCQMSampler(profile=profile)
         min_time_limit = sampler.min_time_limit(self.cqm)
-        time_limit = max(min_time_limit, time_limit)
+        if time_limit is not None:
+            time_limit = max(min_time_limit, time_limit)
         raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit, label='Job Shop Demo')
         self.feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
         num_feasible = len(self.feasible_sampleset)
@@ -210,23 +263,22 @@ class JobShopSchedulingCQM():
         self.completion_time = self.best_sample['makespan']
 
 
-    def call_mip_solver(self, time_limit: int=100) -> SampleSet:
+    def call_mip_solver(self, time_limit: int=100):
         """This function calls the MIP solver and returns the solution
 
         Args:
             time_limit (int, optional): The maximum amount of time to
             allow the MIP solver to before returning. Defaults to 100.
 
-        Returns:
-            SampleSet: The solution to the problem from the MIP solver,
-                or an empty SampleSet if no solution was found.
+        Modifies:
+            self.solution: the solution to the problem
         """        
         solver = mip_solver.MIPCQMSolver()
         sol = solver.sample_cqm(cqm=self.cqm, time_limit=time_limit)
         self.solution = {}
         if len(sol) == 0:
             warnings.warn("Warning: MIP did not find feasible solution")
-            return self.solution
+            return
         best_sol = sol.first.sample
         
         for (var, val) in best_sol.items():
@@ -341,43 +393,41 @@ def run_shop_scheduler(
 if __name__ == "__main__":
     """Modeling and solving Job Shop Scheduling using CQM solver."""
 
-    # Start the timer
-    start_time = time()
-
     # Instantiate the parser
     parser = argparse.ArgumentParser(
         description='Job Shop Scheduling Using LeapHybridCQMSampler',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('-instance', type=str,
+    parser.add_argument('-i', '--instance', type=str,
                         help='path to the input instance file; ',
                         default='input/instance5_5.txt')
 
-    parser.add_argument('-tl', type=int,
-                        help='time limit in seconds')
+    parser.add_argument('-tl', '--time_limit', type=int,
+                        help='time limit in seconds',
+                        default=10)
 
-    parser.add_argument('-os', type=str,
+    parser.add_argument('-os', '--output_solution', type=str,
                         help='path to the output solution file',
                         default='output/solution.txt')
 
-    parser.add_argument('-op', type=str,
+    parser.add_argument('-op', '--output_plot', type=str,
                         help='path to the output plot file',
                         default='output/schedule.png')
     
-    parser.add_argument('-use_mip_solver', action='store_true',
+    parser.add_argument('-m', '--use_mip_solver', action='store_true',
                         help='Whether to use the MIP solver instead of the CQM solver')
     
-    parser.add_argument('-verbose', action='store_true', default=True,
+    parser.add_argument('-v', '--verbose', action='store_true', default=True,
                         help='Whether to print verbose output')
     
-    parser.add_argument('-allow_quad', action='store_true',
+    parser.add_argument('-q', '--allow_quad', action='store_true',
                         help='Whether to allow quadratic constraints')
     
-    parser.add_argument('-profile', type=str,
+    parser.add_argument('-p', '--profile', type=str,
                         help='The profile variable to pass to the Sampler. Defaults to None.',
                         default=None)
     
-    parser.add_argument('-max_makespan', type=int,
+    parser.add_argument('-mm', '--max_makespan', type=int,
                         help='Upperbound on how long the schedule can be; leave empty to auto-calculate an appropriate value.',
                         default=None)
     
@@ -385,14 +435,19 @@ if __name__ == "__main__":
     # Parse input arguments.
     args = parser.parse_args()
     input_file = args.instance
-    time_limit = args.tl
-    out_plot_file = args.op
-    out_sol_file = args.os
+    time_limit = args.time_limit
+    out_plot_file = args.output_plot
+    out_sol_file = args.output_solution
     allow_quadratic_constraints = args.allow_quad
+    max_makespan = args.max_makespan
+    profile = args.profile
+    use_mip_solver = args.use_mip_solver
+    verbose = args.verbose
+
 
     job_data = JobShopData()
     job_data.load_from_file(input_file)
 
-    results = run_shop_scheduler(job_data, time_limit, verbose=args.verbose, use_mip_solver=args.use_mip_solver,
-                          allow_quadratic_constraints=allow_quadratic_constraints, profile=args.profile,
-                          max_makespan=args.max_makespan)
+    results = run_shop_scheduler(job_data, time_limit, verbose=verbose, use_mip_solver=use_mip_solver,
+                          allow_quadratic_constraints=allow_quadratic_constraints, profile=profile,
+                          max_makespan=max_makespan, out_sol_file=out_sol_file, out_plot_file=out_plot_file)
