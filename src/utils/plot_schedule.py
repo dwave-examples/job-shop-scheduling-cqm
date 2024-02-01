@@ -111,7 +111,7 @@ if __name__ == "__main__":
         description='Plot a schedule given by a JSS solution file.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('s', type=str,
+    parser.add_argument('-s', type=str,
                         help='path to the input solution file')
 
     parser.add_argument('-op', type=str,
