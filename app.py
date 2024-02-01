@@ -30,7 +30,6 @@ Apache License, Version 2.0
 
 '''
 
-import json
 import time
 
 import dash
@@ -47,31 +46,7 @@ background_callback_manager = DiskcacheManager(cache)
 
 from src.model_data import JobShopData
 from src.job_shop_scheduler import run_shop_scheduler
-
-#built-in color scales at https://plotly.com/python/builtin-colorscales/y
-
-
-SCENARIOS = {
-    '3x3': "instance3_3.txt",
-    '5x5': "instance5_5.txt",
-    '10x10': "instance10_10.txt",
-    '15x15': "taillard15_15.txt",
-    '20x15': "instance20_15.txt",
-    '20x25': "instance20_25.txt",
-    '30x30': "instance30_30.txt"
-}
-
-MODEL_OPTIONS = {
-    "Mixed Integer Model": "MIP",
-    "Mixed Integer Quadratic Model": "QM",
-}
-
-SOLVER_OPTIONS = {
-    "D-Wave Hybrid Solver": "Hybrid",
-    "COIN-OR Branch-and-Cut Solver (CBC)": "MIP"
-}
-
-RESOURCE_NAMES = json.load(open('./src/data/resource_names.json', 'r'))['industrial']
+from app_configs import SCENARIOS, MODEL_OPTIONS, SOLVER_OPTIONS, RESOURCE_NAMES, HTML_CONFIGS
 
 app = dash.Dash(
     __name__,
@@ -79,12 +54,11 @@ app = dash.Dash(
     prevent_initial_callbacks="initial_duplicate",
     background_callback_manager=background_callback_manager
 )
-app.title = "Job Shop Scheduling Demo"
+app.title = HTML_CONFIGS['title']
 
 server = app.server
 app.config.suppress_callback_exceptions = True
 
-# Path
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("input").resolve()
 
@@ -105,7 +79,7 @@ def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
         Resource, and delta.
     """
     task_data = []
-    for job, tasks in job_shop_data.job_tasks.items():
+    for tasks in job_shop_data.job_tasks.values():
         start_time = 0
         for task in tasks:
             end_time = start_time + task.duration
@@ -125,40 +99,27 @@ def description_card():
     return html.Div(
         id="description-card",
         children=[
-            html.H5("Job Shop Scheduling"),
-            html.H3("Welcome to the Job Shop Scheduling Dashboard"),
+            html.H5(HTML_CONFIGS['main_header']),
+            html.H3(HTML_CONFIGS['welcome_message']),
             html.Div(
                 id="intro",
-                children="Run the job shop scheduling problem for several different scenarios. Explore the Gantt Chart for solution details.",
+                children=HTML_CONFIGS['welcome_instructions'],
             ),
         ],
     )
 
 
-def generate_duration_slider(resource, min_value=1, max_value=5):
-    """
-    :param resource: The resource to generate a slider for.
-    :param min: The minimum duration.
-    :param max: The maximum duration.
-    :return: A Div containing a slider for the given resource.
-    """
-    return html.Div(
-        id="duration-slider-div{}".format(resource),
-        children=[
-            html.P("Duration for {}".format(resource)),
-            dcc.Slider(
-                id="duration-slider-{}".format(resource),
-                min=min_value,
-                max=max_value,
-                step=1,
-                value=1,
-                marks={i: "{}".format(i) for i in range(min_value, max_value + 1)},
-            ),
-        ],
-    )
+def get_empty_figure(message: str) -> go.Figure:
+    """This function generates an empty chart figure, with a message
+    in the center of the chart. This is used to replace the chart object
+    when no chart is available.
 
+    Args:
+        message (str): The message to display in the center of the chart.
 
-def get_empty_figure(message):
+    Returns:
+        go.Figure: A Plotly figure object with the input data.
+    """    
     fig = go.Figure()
     fig.update_layout(
         xaxis =  { "visible": False },
@@ -181,9 +142,14 @@ def get_empty_figure(message):
     return fig
 
 
-def generate_control_card():
+def generate_control_card() -> html.Div:
     """
-    :return: A Div containing controls for graphs.
+    This function generates the control card for the dashboard, which
+    contains the dropdowns for selecting the scenario, model, and solver.
+
+    Returns:
+        html.Div: A Div containing the dropdowns for selecting the scenario,
+        model, and solver.
     """
     scenario_options = []
     for scenario in SCENARIOS:
@@ -222,10 +188,10 @@ def generate_control_card():
             dcc.Input(
             id="solver_time_limit",
             type='number',
-            value=5,
-            min=5,
-            max=300,
-            step=5,
+            value=HTML_CONFIGS['solver_options']['default_time_seconds'],
+            min=HTML_CONFIGS['solver_options']['min_time_seconds'],
+            max=HTML_CONFIGS['solver_options']['max_time_seconds'],
+            step=HTML_CONFIGS['solver_options']['time_step_seconds'],
             ),
             html.Div(
                 id="button-group",
@@ -284,6 +250,7 @@ def load_initial_figures(n_clicks: int) -> \
     else:
         raise PreventUpdate
 
+
 @app.callback(
     Output("dwave_tab", 'className', allow_duplicate=True),
     Output("mip_tab", 'className', allow_duplicate=True),
@@ -308,7 +275,7 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
             been clicked.
 
     Raises:
-        PreventUpdate: If the event is trigged by anything other than 
+        PreventUpdate: If the event is triggered by anything other than 
             the run button or cancel button, this will raise PreventUpdate
             to prevent the tab loading state from being updated.
 
@@ -362,7 +329,7 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
         time_limit (int): The time limit for the optimization.
 
     Raises:
-        PreventUpdate: If this was not trigged by a run-button click,
+        PreventUpdate: If this was not triggered by a run-button click,
             this will raise PreventUpdate to prevent the optimization
             from running.
 
@@ -392,7 +359,7 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
             return fig,table,'tab-success', {'visibility': 'visible'}
         else:
             time.sleep(0.1)
-            empty_figure = get_empty_figure('Choose D-Wave Hybrid Solver to run this solver')
+            empty_figure = get_empty_figure(HTML_CONFIGS['solver_messages']['dwave']['solver_not_chosen'])
             table = generate_output_table(0, 0, 0)
             return empty_figure,table,'tab-warning', {'visibility': 'hidden'}
     else:
@@ -433,7 +400,7 @@ def run_optimization_mip(run_click: int,
         time_limit (int): The time limit for the optimization.
 
     Raises:
-        PreventUpdate: If this was not trigged by a run-button click,
+        PreventUpdate: If this was not triggered by a run-button click,
             this will raise PreventUpdate to prevent the optimization
             from running.
 
@@ -454,7 +421,7 @@ def run_optimization_mip(run_click: int,
             allow_quadratic_constraints = model == 'QM'
             if allow_quadratic_constraints:
                 time.sleep(0.1) #sleep to allow the loading icon to appear first
-                fig = get_empty_figure('Unable to run MIP solver with quadratic constraints')
+                fig = get_empty_figure(HTML_CONFIGS['solver_messages']['mip']['quadratic_error'])
                 class_name = 'tab-fail'
                 mip_table = generate_output_table(0, 0, 0)
                 mip_table_style = {'visibility': 'hidden'}
@@ -466,7 +433,7 @@ def run_optimization_mip(run_click: int,
                                              solver_time_limit=time_limit)
                 end = time.time()
                 if len(results) == 0:
-                    fig = get_empty_figure('MIP solver failed to find a solution.')
+                    fig = get_empty_figure(HTML_CONFIGS['solver_messages']['mip']['no_solution'])
                     mip_table = generate_output_table(0, 0, 0)
                     class_name = 'tab-fail'
                     mip_table_style = {'visibility': 'hidden'}
@@ -478,7 +445,7 @@ def run_optimization_mip(run_click: int,
             return fig, mip_table, class_name, mip_table_style  
         else:
             time.sleep(0.1) #sleep to allow the loading icon to appear first
-            message = 'Select COIN-OR Branch and Cut Solver to run this solver'
+            message = HTML_CONFIGS['solver_messages']['mip']['solver_not_chosen']
             empty_figure = get_empty_figure(message)
             mip_table = generate_output_table(0, 0, 0)
             mip_table_style = {'visibility': 'hidden'}
@@ -507,14 +474,18 @@ def generate_unscheduled_gantt_chart(scenario: str) -> go.Figure:
 
 
 def generate_gantt_chart(
-        scenario=None,
-        df=None,
+        scenario: str=None,
+        df: pd.DataFrame=None,
         y_axis: str='Job',
         color: str='Resource') -> go.Figure:
     """Generates a Gantt chart of the unscheduled tasks for the given scenario.
 
     Args:
         scenario (str): The name of the scenario; must be a key in SCENARIOS.
+        df (pd.DataFrame): A DataFrame containing the data to plot. If this is
+            not None, then the scenario argument will be ignored.
+        y_axis (str): The column to use for the y-axis of the Gantt chart.
+        color (str): The column to use for the color of the Gantt chart.
 
     Returns:
         go.Figure: A Plotly figure object.
@@ -527,7 +498,6 @@ def generate_gantt_chart(
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
         df = get_minimum_task_times(model_data)
     if y_axis == 'Job':
-        #convert to int if it is a string
         if df['Job'].dtype == 'object':
             df['JobInt'] = df['Job'].str.replace('Job', '').astype(int)
         else:
@@ -540,10 +510,6 @@ def generate_gantt_chart(
     df[color] = df[color].astype(str)
     df[y_axis] = df[y_axis].astype(str)
     num_items = len(df[color].unique())
-    #d-wave primary
-    colorscale = px.colors.make_colorscale(['#ffa143', '#17bebb', '#2a7de1'])
-    #d-wave bright
-    colorscale = px.colors.make_colorscale(['#FFA143', '#06ECDC', '#03b8ff'])
     colorscale = 'Agsunset'
     fig = px.timeline(df, x_start="Start", x_end="Finish", y=y_axis, color=color,
     color_discrete_sequence = px.colors.sample_colorscale(colorscale, [n/(num_items -1) for n in range(num_items)]))
@@ -621,7 +587,7 @@ app.layout = html.Div(
             className="gantt-container",
             children=[
                 dcc.Tabs(id="tabs", value='input_tab', children=[
-                    dcc.Tab(label='Input',
+                    dcc.Tab(label=HTML_CONFIGS['tabs']['input']['name'],
                             value='input_tab',
                             className='tab',
                             children=[html.Div(
@@ -629,7 +595,7 @@ app.layout = html.Div(
                                 id="unscheduled_gantt_chart_card",
                                 className="gantt-div",
                                 children=[
-                                    html.B("Jobs to be Scheduled", className="gantt-title"),
+                                    html.B(HTML_CONFIGS['tabs']['input']['header'], className="gantt-title"),
                                     html.Hr(className="gantt-hr"),
                                     dcc.Loading(id = "loading-icon-input", children=[ 
                                         dcc.Graph(id="unscheduld_gantt_chart"),
@@ -637,7 +603,7 @@ app.layout = html.Div(
                                 )])
                             )])
                         ,
-                        dcc.Tab(label='D-Wave',
+                        dcc.Tab(label=HTML_CONFIGS['tabs']['dwave']['name'],
                                 value='dwave_tab',
                                 id='dwave_tab',
                                 className='tab',
@@ -646,7 +612,7 @@ app.layout = html.Div(
                                         id="optimized_gantt_chart_card",
                                         className="gantt-div",
                                         children=[
-                                            html.B("D-Wave Hybrid Solver", className="gantt-title"),
+                                            html.B(HTML_CONFIGS['tabs']['dwave']['header'], className="gantt-title"),
                                             html.Hr(className="gantt-hr"),
                                             dcc.Loading(id = "loading-icon-dwave", 
                                             children=[ 
@@ -657,7 +623,7 @@ app.layout = html.Div(
                                         ]))
                                     ])
                                     ,
-                        dcc.Tab(label='Classical',
+                        dcc.Tab(label=HTML_CONFIGS['tabs']['classical']['name'],
                                 id='mip_tab',
                                 className='tab',
                                 value='mip_tab', 
@@ -666,7 +632,7 @@ app.layout = html.Div(
                                         id="mip_gantt_chart_card",
                                         className="gantt-div",
                                         children=[
-                                            html.B("COIN-OR Branch-and-Cut Solver", className="gantt-title"),
+                                            html.B(HTML_CONFIGS['tabs']['classical']['header'], className="gantt-title"),
                                             html.Hr(className="gantt-hr"),
                                             dcc.Loading(id = "loading-icon-coinor", 
                                                 children=[ 
@@ -674,8 +640,8 @@ app.layout = html.Div(
                                                     ]
                                                 ),
                                             dcc.Graph(id="mip_summary_table")
-                                            ]))
-                                        ])
+                                        ]))
+                                    ])
                         ])
              ])
     ])
