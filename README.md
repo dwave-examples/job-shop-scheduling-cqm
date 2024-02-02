@@ -6,38 +6,36 @@
   https://circleci.com/gh/dwave-examples/job-shop-scheduling-cqm)
 
 # Job Shop Scheduling using CQM
+[Job shop scheduling](https://en.wikipedia.org/wiki/Job-shop_scheduling) is an optimization problem where the goal is to schedule jobs on a certain number of machines according to a process order for each job. The objective is to minimize the length of schedule also called make-span, or completion time of the last task of all jobs.
 
-[Job shop scheduling](https://en.wikipedia.org/wiki/Job-shop_scheduling) is an
-optimization problem where the goal is to schedule jobs on a certain number of
-machines according to a process order for each job.
-The objective is to minimize the length of schedule also called make-span, or 
-completion time of the last task of all jobs.
-
-This example demonstrates a means of formulating and optimizing job shop 
-scheduling (JSS) using a [constrained quadratic model](
-https://docs.ocean.dwavesys.com/en/stable/concepts/cqm.html#cqm-sdk) (CQM) that
-can be solved using a Leap hybrid CQM solver.
+This example demonstrates a means of formulating and optimizing job shop  scheduling (JSS) using a [constrained quadratic model](https://docs.ocean.dwavesys.com/en/stable/concepts/cqm.html#cqm-sdk) (CQM) that can be solved using a Leap hybrid CQM solver. Contained in this example is the code for running the job shop scheduler as well as a user interface built with [Dash](https://dash.plotly.com/).
 
 ## Usage
+To run the job shop demo with the user interface, from the command line enter
 
-To run the demo, type:
+    python app.py
+  
+This will launch a local instance of the application on localhost. The default run location is http://127.0.0.1:8050/. Open the location in a web browser to view the application.
 
-    python job_shop_scheduler.py
+To run the stand-alone job shop demo (without the user interace), use the command:
 
-The demo program solves a 5 * 5 job shop scheduling problem
-(5 jobs and 5 machines) defined by `input/instance_5_5.txt`. The solution
-returned by the Leap hybrid CQM solver is then saved to `solution.txt` and the 
-scheduling plot is saved to `schedule.png`.
+    python job_shop_scheduler.py [-h] [-i INSTANCE] [-tl TIME_LIMIT] [-os OUTPUT_SOLUTION] [-op OUTPUT_PLOT] [-m] [-v] [-q] [-p PROFILE] [-mm MAX_MAKESPAN]
 
-To solve a different problem instance, type:
+This will call the job shop scheduling algorithm for the input instance file. Command line arguments are defined as:
+- -h (or --help): show this help message and exit
+- -i (--instance): path to the input instance file; (default: input/instance5_5.txt)
+- -tl (--time_limit) time limit in seconds (default: None)
+-  -os (--output_solution): path to the output solution file (default: output/solution.txt)
+-  -op (--output_plot): path to the output plot file (default: output/schedule.png)
+-  -m (--use_mip_solver): Whether to use the MIP solver instead of the CQM solver (default: False)
+-  -v (--verbose): Whether to print verbose output (default: True)
+-  -q (--allow_quad): Whether to allow quadratic constraints (default: False)
+-  -p (--profile): The profile variable to pass to the Sampler. Defaults to None. (default: None)
+-  -mm (--max_makespan): Upperbound on how long the schedule can be; leave empty to auto-calculate an appropriate value. (default: None)
 
-    python job_shop_scheduler.py -instance <path to your problem file>
+There are several instances pre-populated under `input` folder. Some of the instances were randomly generated using `utils/jss_generator.py` as discussed under the [Problem generator](#Generating-Problem-Instances) section.
 
-There are several instances under `input` folder. Alternatively, a random 
-instance file could be generated using `utils/jss_generator.py` as discussed 
-under the [Problem generator](#Generating-Problem-Instances) section.
-
-This is an example of a JSS input instance file for a 5 * 5 problem:
+Other instances were pulled from [E. Taillard's list] of benchmarking instances. If the string "taillard" is contained in the filename, the model will expect the input file to match the format used by Taillard. Otherwse, the following format is expected:
 
 ```
 #Num of jobs: 5 
@@ -54,21 +52,9 @@ This is an example of a JSS input instance file for a 5 * 5 problem:
 ```
 
 Note that:
-
 - tasks must be executed sequentially;
 - `dur` refers to the processing duration of a task;
-- when duration is 0 for a task, the task will not be executed;
-- this demo solves a variant of job-shop-scheduling problem,
- which enforces a one-to-one relationship between tasks and machines, therefore,
-the number of tasks per job is always equal to the number of machines in the problem.
-
-These additional parameters can be passed to `job_shop_scheduler.py`:
-
-    -h, --help          show this help message and exit
-    -instance INSTANCE  path to the input instance file; (default: input/instance5_5.txt)
-    -tl TL              time limit in seconds (default: None)
-    -os OS              path to the output solution file (default: solution.txt)
-    -op OP              path to the output plot file (default: shcedule.png)
+- this demo solves a variant of job-shop-scheduling problem
 
 The program produces a solution schedule like this:
 
@@ -149,29 +135,20 @@ assuming that task 4 takes 12 hours to finish, we add this constraint:
 Our second constraint, [equation 2](#eq2), ensures that multiple jobs don't use any machine at the same time. 
 ![eq2](_static/eq2.png)          (2)
 
-Usually this constraint is modeled as two disjunctive linear constraints 
-([Ku et al. 2016](#Ku) and [Manne et al. 1960](#Manne)); however, 
-it is more efficient to model this as a single quadratic inequality constraint. 
-In addition, using this quadratic equation eliminates the need for using the so called 
-`Big M` value to activate or relax constraint
-(https://en.wikipedia.org/wiki/Big_M_method). 
+Usually this constraint is modeled as two disjunctive linear constraints ([Ku et al. 2016](#Ku) and [Manne et al. 1960](#Manne)); however, it is more efficient to model this as a single quadratic inequality constraint. In addition, using this quadratic equation eliminates the need for using the so called `Big M` value to activate or relax constraint (https://en.wikipedia.org/wiki/Big_M_method). 
 
-The proposed quadratic equation fulfills the same behaviour as the linear
-constraints:
+The proposed quadratic equation fulfills the same behaviour as the linear constraints:
+
 There are two cases:
 - if `y_j,k,i = 0` job `j` is processed after job `k`:  
   ![equation2_1](_static/eq2_1.png)   
 - if `y_j,k,i = 1` job `k` is processed after job `j`:  
   ![equation2_2](_static/eq2_2.png)   
-  Since these equations are applied to every pair of jobs,
-  they guarantee that the jobs don't overlap on a machine.
+  Since these equations are applied to every pair of jobs, they guarantee that the jobs don't overlap on a machine. If -allow_quad is set to False, this mixed integer formulation of this constraint will be used.
 
 #### Make-Span Constraint 
-The make-span of a JSS problem can be calculated by obtaining the maximum 
-completion time for the last task of all jobs. This can be obtained using 
-the inequality constraint of [equation3](#eq3)
+In this demonstration, the maximum makespan can be defined by the user or it will be determined using a greedy heuristic. Placing an upper bound on the makespan improves the performance of the D-Wave sampler; however, if the upper bound is too low then the sampler may fail to find a feasible solution.
 
-![eq3](_static/eq3.png)          (3)
 
 ## References
 
@@ -187,3 +164,5 @@ Volume 73, 2016, Pages 165-173.
 ## License
 
 Released under the Apache License 2.0. See [LICENSE](LICENSE) file.
+
+[E. Taillard's list]: http://mistic.heig-vd.ch/taillard/problemes.dir/ordonnancement.dir/ordonnancement.html
