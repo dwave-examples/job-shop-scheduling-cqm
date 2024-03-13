@@ -16,7 +16,7 @@ import unittest
 
 import dimod
 
-from src.utils.mip_solver import SciPyCQMSolver
+from src.utils.scipy_solver import SciPyCQMSolver
 
 
 class TestSciPyCQMSolver(unittest.TestCase):
