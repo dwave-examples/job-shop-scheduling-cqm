@@ -12,51 +12,53 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import itertools
 import time
 import typing
 
-import mip
 import dimod
+import numpy as np
+import scipy.optimize
 
 
-class MIPCQMSolver:
-    """An Ocean wrapper for Python-MIP's solver.
+class SciPyCQMSolver:
+    """An Ocean wrapper for SciPy's MILP solver.
 
-    See https://www.python-mip.com/
+    See :func:`scipy.optimize.milp()`
     """
     @staticmethod
-    def _mip_vartype(vartype: dimod.typing.VartypeLike) -> str:
-        vartype = dimod.as_vartype(vartype, extended=True)
-        if vartype is dimod.SPIN:
-            raise ValueError("MIP cannot handle SPIN variables")
-        elif vartype is dimod.BINARY:
-            return 'B'
-        elif vartype is dimod.INTEGER:
-            return 'I'
-        elif vartype is dimod.REAL:
-            return 'C'
-        else:
-            raise ValueError("unexpected vartype")
+    def iter_constraints(
+            cqm: dimod.ConstrainedQuadraticModel,
+            ) -> typing.Iterator[scipy.optimize.LinearConstraint]:
+        num_variables = cqm.num_variables()
+
+        for comp in cqm.constraints.values():
+            if comp.sense is dimod.sym.Sense.Eq:
+                lb = ub = comp.rhs
+            elif comp.sense is dimod.sym.Sense.Ge:
+                lb = comp.rhs
+                ub = +float("inf")
+            elif comp.sense is dimod.sym.Sense.Le:
+                lb = -float("inf")
+                ub = comp.rhs
+            else:
+                raise ValueError("unexpected constraint sense")
+
+            A = np.zeros(num_variables, dtype=float)
+            for v, bias in comp.lhs.linear.items():
+                A[cqm.variables.index(v)] = bias  # variables.index() is O(1)
+
+            # Create the LinearConstraint.
+            # We save A as a csr matrix to save on a bit of memory
+            yield scipy.optimize.LinearConstraint(
+                scipy.sparse.csr_array(A), lb=lb, ub=ub)
 
     @staticmethod
-    def _qm_to_expression(qm: typing.Union[dimod.QuadraticModel, dimod.BinaryQuadraticModel],
-                          variable_map: typing.Dict[dimod.typing.Variable, mip.Var],
-                          ) -> mip.LinExpr:
-        if not qm.is_linear():
-            raise ValueError("MIP cannot support quadratic interactions")
-        return mip.xsum(itertools.chain(
-            (variable_map[v] * bias for v, bias in qm.iter_linear()),
-            (qm.offset,)
-            ))
-
-    @classmethod
-    def sample_cqm(cls, cqm: dimod.ConstrainedQuadraticModel,
+    def sample_cqm(cqm: dimod.ConstrainedQuadraticModel,
                    time_limit: float = float('inf'),
                    ) -> dimod.SampleSet:
-        """Use Python-MIP to solve a constrained quadratic model.
+        """Use HiGHS via SciPy to solve a constrained quadratic model.
 
-        Note that Python-MIP requires the objective and constraints to be
+        Note that HiGHS requires the objective and constraints to be
         linear.
 
         Args:
@@ -64,50 +66,73 @@ class MIPCQMSolver:
             time_limit: The maximum time in seconds to search.
 
         Returns:
-            A sample set with any solutions returned by Python-MIP.
+            A sample set with any solutions returned by
+            :func:`scipy.optimize.milp()`.
 
         Raises:
             ValueError: If the given constrained quadratic model contains
                 any quadratic terms.
 
         """
-        model = mip.Model()
+        # Note: we name the input variables according to SciPy's naming
+        # conventions
 
-        model.verbose = 0
+        # Handle the empty case
+        if not cqm.variables:
+            return dimod.SampleSet.from_samples_cqm([], cqm, info=dict(run_time=0))
 
-        variable_map: typing.Dict[dimod.typing.Variable, mip.Var] = dict()
-        for v in cqm.variables:
-            variable_map[v] = model.add_var(
-                name=v,
-                lb=cqm.lower_bound(v),
-                ub=cqm.upper_bound(v),
-                var_type=cls._mip_vartype(cqm.vartype(v))
-                )
+        # Check that we're a linear model
+        if not cqm.objective.is_linear():
+            raise ValueError("scipy.optimize.milp() does not support objectives "
+                             "with quadratic interactions")
+        if not all(comp.lhs.is_linear() for comp in cqm.constraints.values()):
+            raise ValueError("scipy.optimize.milp() does not support constraints "
+                             "with quadratic interactions")
 
-        model.objective = cls._qm_to_expression(cqm.objective, variable_map)
+        num_variables = cqm.num_variables()
 
-        for label, constraint in cqm.constraints.items():
-            lhs = cls._qm_to_expression(constraint.lhs, variable_map)
-            rhs = constraint.rhs
-            if constraint.sense is dimod.sym.Sense.Le:
-                model.add_constr(lhs <= rhs, name=label)
-            elif constraint.sense is dimod.sym.Sense.Ge:
-                model.add_constr(lhs >= rhs, name=label)
-            elif constraint.sense is dimod.sym.Sense.Eq:
-                model.add_constr(lhs == rhs, name=label)
+        # The objective
+        c = np.empty(num_variables, dtype=float)
+        for i, v in enumerate(cqm.variables):
+            c[i] = cqm.objective.linear.get(v, 0)
+
+        # The vartypes and the bounds
+        integrality = np.empty(num_variables, dtype=np.uint8)
+        lb = np.empty(num_variables, dtype=float)
+        ub = np.empty(num_variables, dtype=float)
+        for i, v in enumerate(cqm.variables):
+            vartype = cqm.vartype(v)
+            if vartype is dimod.BINARY:
+                integrality[i] = 1  # 1 indicates integer variable
+            elif vartype is dimod.INTEGER:
+                integrality[i] = 1  # 1 indicates integer variable
+            elif vartype is dimod.REAL:
+                integrality[i] = 0  # 0 indicates continuous
             else:
-                raise RuntimeError(f"unexpected sense: {lhs.sense!r}")
+                raise ValueError("unexpected vartype")
+
+            lb[i] = cqm.lower_bound(v)
+            ub[i] = cqm.upper_bound(v)
+
+        # The constraints
+        constraints = list(SciPyCQMSolver.iter_constraints(cqm))
 
         t = time.perf_counter()
-        model.optimize(max_seconds=time_limit)
+        solution = scipy.optimize.milp(c,
+                                       integrality=integrality,
+                                       bounds=scipy.optimize.Bounds(lb=lb, ub=ub),
+                                       options=dict(time_limit=time_limit),
+                                       constraints=constraints,
+                                       )
         run_time = time.perf_counter() - t
 
-        samples = [
-            [variable_map[v].xi(k) for v in cqm.variables]
-            for k in range(model.num_solutions)
-            ]
+        # If we're infeasible, return an empty solution
+        if not solution.success:
+            return dimod.SampleSet.from_samples_cqm([], cqm, info=dict(run_time=run_time))
 
+        # Otherwise we can just read the solution out and convert it into a
+        # dimod sampleset
         sampleset = dimod.SampleSet.from_samples_cqm(
-            (samples, cqm.variables), cqm, info=dict(run_time=run_time))
-        
+            (solution.x, cqm.variables), cqm, info=dict(run_time=run_time))
+
         return sampleset
