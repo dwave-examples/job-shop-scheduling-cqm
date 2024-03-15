@@ -33,13 +33,13 @@ class SciPyCQMSolver:
 
         for comp in cqm.constraints.values():
             if comp.sense is dimod.sym.Sense.Eq:
-                lb = ub = comp.rhs
+                lb = ub = comp.rhs - comp.lhs.offset # move offset (if not 0) to rhs of constraint
             elif comp.sense is dimod.sym.Sense.Ge:
-                lb = comp.rhs
+                lb = comp.rhs - comp.lhs.offset
                 ub = +float("inf")
             elif comp.sense is dimod.sym.Sense.Le:
                 lb = -float("inf")
-                ub = comp.rhs
+                ub = comp.rhs - comp.lhs.offset
             else:
                 raise ValueError("unexpected constraint sense")
 
