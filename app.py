@@ -384,11 +384,11 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
     prevent_initial_call=True
 )
 def run_optimization_highs(run_click: int,
-                         model: str,
-                         solver: str,
-                         scenario: str,
-                         time_limit: int) \
-                         -> tuple[go.Figure, go.Figure, str, str]:
+                           model: str,
+                           solver: str,
+                           scenario: str,
+                           time_limit: int,
+                           ) -> tuple[go.Figure, go.Figure, str, str]:
     """This function runs the optimization using the HiGHS via SciPy solver.
 
     Args:
