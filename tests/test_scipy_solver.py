@@ -49,6 +49,16 @@ class TestSciPyCQMSolver(unittest.TestCase):
         sampleset = SciPyCQMSolver().sample_cqm(cqm)
         self.assertEqual(sampleset.first.sample['i'], 5)
 
+    def test_offset(self):
+        cqm = dimod.ConstrainedQuadraticModel()
+
+        i = dimod.Integer('i', lower_bound=-10, upper_bound=10)
+
+        cqm.add_constraint(i + 5 <= 0)
+
+        sampleset = SciPyCQMSolver().sample_cqm(cqm)
+        self.assertEqual(sampleset.first.sample['i'], -5)
+
     def test_quadratic(self):
         cqm = dimod.ConstrainedQuadraticModel()
 
