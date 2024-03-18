@@ -212,11 +212,11 @@ def generate_control_card() -> html.Div:
 
 @app.callback(
     Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
-    Output('mip_gantt_chart', 'figure', allow_duplicate=True),
+    Output('highs_gantt_chart', 'figure', allow_duplicate=True),
     Output('dwave_summary_table', 'figure', allow_duplicate=True),
-    Output('mip_summary_table', 'figure', allow_duplicate=True),
+    Output('highs_summary_table', 'figure', allow_duplicate=True),
     Output('dwave_summary_table', 'style', allow_duplicate=True),
-    Output('mip_summary_table', 'style', allow_duplicate=True),  
+    Output('highs_summary_table', 'style', allow_duplicate=True),
     [Input('run-button', 'n_clicks')],
     prevent_initial_call=False
 )
@@ -238,9 +238,9 @@ def load_initial_figures(n_clicks: int) -> \
     Returns:
         tuple: A tuple of two Plotly figures and two strings. The first
         figure is the Gantt chart for the D-Wave hybrid solver, the second
-        figure is the Gantt chart for the COIN-OR Branch-and-Cut solver,
+        figure is the Gantt chart for the HiGHS solver,
         the first string is the style for the D-Wave summary table, and
-        the second string is the style for the COIN-OR summary table.
+        the second string is the style for the HiGHS summary table.
     """    
     if n_clicks == 0:
         empty_figure = get_empty_figure('Run optimization to see results')
@@ -253,11 +253,11 @@ def load_initial_figures(n_clicks: int) -> \
 
 @app.callback(
     Output("dwave_tab", 'className', allow_duplicate=True),
-    Output("mip_tab", 'className', allow_duplicate=True),
+    Output("highs_tab", 'className', allow_duplicate=True),
     Output('optimized_gantt_chart', 'figure', allow_duplicate=True),
-    Output('mip_gantt_chart', 'figure', allow_duplicate=True),
+    Output('highs_gantt_chart', 'figure', allow_duplicate=True),
     Output('dwave_summary_table', 'style', allow_duplicate=True),
-    Output('mip_summary_table', 'style', allow_duplicate=True),
+    Output('highs_summary_table', 'style', allow_duplicate=True),
     [
         Input('run-button', 'n_clicks'),
         Input("cancel-button", "n_clicks")
@@ -346,10 +346,10 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
             model_data = JobShopData()
             filename = SCENARIOS[scenario]
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-            allow_quadratic_constraints = model == 'QM'
+            allow_quadratic_constraints = model == 'MIQP'
             start = time.time()
             results = run_shop_scheduler(model_data, 
-                                         use_mip_solver=False,
+                                         use_scipy_solver=False,
                                          allow_quadratic_constraints=allow_quadratic_constraints,
                                          solver_time_limit=time_limit,
                                          )
@@ -367,10 +367,10 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
 
 
 @app.callback(
-    Output("mip_gantt_chart", 'figure'),
-    Output('mip_summary_table', 'figure'),
-    Output('mip_tab', 'className'),
-    Output('mip_summary_table', 'style'),
+    Output("highs_gantt_chart", 'figure'),
+    Output('highs_summary_table', 'figure'),
+    Output('highs_tab', 'className'),
+    Output('highs_summary_table', 'style'),
     [
         Input('run-button', 'n_clicks'),
         State("model-select", "value"),
@@ -383,13 +383,13 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True
 )
-def run_optimization_mip(run_click: int,
+def run_optimization_highs(run_click: int,
                          model: str,
                          solver: str,
                          scenario: str,
                          time_limit: int) \
                          -> tuple[go.Figure, go.Figure, str, str]:
-    """This function runs the optimization using the COIN-OR Branch-and-Cut solver.
+    """This function runs the optimization using the HiGHS via SciPy solver.
 
     Args:
         run_click (int): The number of times the run button has been
@@ -413,43 +413,43 @@ def run_optimization_mip(run_click: int,
         empty_figure = get_empty_figure('Run optimization to see results')
         return empty_figure, 'tab'
     if ctx.triggered_id == "run-button":
-        if 'MIP' in solver:
+        if 'HiGHS' in solver:
             model_data = JobShopData()
             filename = SCENARIOS[scenario]
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-            use_mip_solver = True
-            allow_quadratic_constraints = model == 'QM'
+            use_scipy_solver = True
+            allow_quadratic_constraints = model == 'MIQP'
             if allow_quadratic_constraints:
                 time.sleep(0.1) #sleep to allow the loading icon to appear first
-                fig = get_empty_figure(HTML_CONFIGS['solver_messages']['mip']['quadratic_error'])
+                fig = get_empty_figure(HTML_CONFIGS['solver_messages']['highs']['quadratic_error'])
                 class_name = 'tab-fail'
-                mip_table = generate_output_table(0, 0, 0)
-                mip_table_style = {'visibility': 'hidden'}
+                highs_table = generate_output_table(0, 0, 0)
+                highs_table_style = {'visibility': 'hidden'}
             else:
                 start = time.time()
                 results = run_shop_scheduler(model_data, 
-                                             use_mip_solver=use_mip_solver,
+                                             use_scipy_solver=use_scipy_solver,
                                              allow_quadratic_constraints=allow_quadratic_constraints,
                                              solver_time_limit=time_limit)
                 end = time.time()
                 if len(results) == 0:
-                    fig = get_empty_figure(HTML_CONFIGS['solver_messages']['mip']['no_solution'])
-                    mip_table = generate_output_table(0, 0, 0)
+                    fig = get_empty_figure(HTML_CONFIGS['solver_messages']['highs']['no_solution'])
+                    highs_table = generate_output_table(0, 0, 0)
                     class_name = 'tab-fail'
-                    mip_table_style = {'visibility': 'hidden'}
+                    highs_table_style = {'visibility': 'hidden'}
                 else:
                     fig = generate_gantt_chart(df=results, y_axis='Job', color='Resource')
                     class_name = 'tab-success'
-                    mip_table = generate_output_table(results['Finish'].max(), time_limit, int(end-start))
-                    mip_table_style = {'visibility': 'visible'}
-            return fig, mip_table, class_name, mip_table_style  
+                    highs_table = generate_output_table(results['Finish'].max(), time_limit, int(end-start))
+                    highs_table_style = {'visibility': 'visible'}
+            return fig, highs_table, class_name, highs_table_style
         else:
             time.sleep(0.1) #sleep to allow the loading icon to appear first
-            message = HTML_CONFIGS['solver_messages']['mip']['solver_not_chosen']
+            message = HTML_CONFIGS['solver_messages']['highs']['solver_not_chosen']
             empty_figure = get_empty_figure(message)
-            mip_table = generate_output_table(0, 0, 0)
-            mip_table_style = {'visibility': 'hidden'}
-            return empty_figure, mip_table, 'tab-warning', mip_table_style
+            highs_table = generate_output_table(0, 0, 0)
+            highs_table_style = {'visibility': 'hidden'}
+            return empty_figure, highs_table, 'tab-warning', highs_table_style
     else:
         raise PreventUpdate
 
@@ -624,22 +624,22 @@ app.layout = html.Div(
                                     ])
                                     ,
                         dcc.Tab(label=HTML_CONFIGS['tabs']['classical']['name'],
-                                id='mip_tab',
+                                id='highs_tab',
                                 className='tab',
-                                value='mip_tab', 
+                                value='highs_tab',
                                 children=[html.Div(
                                     html.Div(
-                                        id="mip_gantt_chart_card",
+                                        id="highs_gantt_chart_card",
                                         className="gantt-div",
                                         children=[
                                             html.B(HTML_CONFIGS['tabs']['classical']['header'], className="gantt-title"),
                                             html.Hr(className="gantt-hr"),
                                             dcc.Loading(id = "loading-icon-coinor", 
                                                 children=[ 
-                                                    dcc.Graph(id="mip_gantt_chart")
+                                                    dcc.Graph(id="highs_gantt_chart")
                                                     ]
                                                 ),
-                                            dcc.Graph(id="mip_summary_table")
+                                            dcc.Graph(id="highs_summary_table")
                                         ]))
                                     ])
                         ])

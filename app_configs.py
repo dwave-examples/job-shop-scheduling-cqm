@@ -16,10 +16,10 @@ HTML_CONFIGS = {
         "default_time_seconds": 5
     },
     "solver_messages": {
-        "mip": {
-            "quadratic_error": "Unable to run MIP solver with quadratic constraints",
-            "no_solution": "No solution found for MIP solver",
-            "solver_not_chosen": "Select COIN-OR Branch and Cut Solver to run this solver"
+        "highs": {
+            "quadratic_error": "Unable to run HiGHS solver with quadratic constraints",
+            "no_solution": "No solution found for HiGHS solver",
+            "solver_not_chosen": "Select HiGHS Classical Solver to run this solver"
             },
         'dwave': {
             "no_solution": "No solution found for D-Wave solver",
@@ -33,7 +33,7 @@ HTML_CONFIGS = {
         },
         "classical": {
             "name": "Classical",
-            "header": "COIN-OR Branch-and-Cut Solver",
+            "header": "HiGHS Classical Solver",
         },
         "dwave": {
             "name": "D-Wave",
@@ -56,14 +56,14 @@ SCENARIOS = {
 
 # The list of models that the user can choose from in the app
 MODEL_OPTIONS = {
-    "Mixed Integer Model": "MIP",
-    "Mixed Integer Quadratic Model": "QM",
+    "Mixed Integer Linear Model": "MILP",
+    "Mixed Integer Quadratic Model": "MIQP",
 }
 
 # The list of solvers that the user can choose from in the app
 SOLVER_OPTIONS = {
     "D-Wave Hybrid Solver": "Hybrid",
-    "COIN-OR Branch-and-Cut Solver (CBC)": "MIP"
+    "HiGHS Classical Solver": "HiGHS"
 }
 
 # The list of resources that the user can choose from in the app

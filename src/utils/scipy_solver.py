@@ -21,7 +21,7 @@ import scipy.optimize
 
 
 class SciPyCQMSolver:
-    """An Ocean wrapper for SciPy's MILP solver.
+    """An Ocean wrapper for SciPy's MILP HiGHS solver.
 
     See :func:`scipy.optimize.milp()`
     """
