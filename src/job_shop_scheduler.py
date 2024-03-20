@@ -17,7 +17,7 @@ import sys
 sys.path.append('./src')
 from utils.utils import print_cqm_stats, write_solution_to_file
 import utils.plot_schedule as job_plotter
-import utils.mip_solver as mip_solver
+import utils.scipy_solver as scipy_solver
 from utils.greedy import GreedyJobShop
 from model_data import JobShopData
 
@@ -239,7 +239,7 @@ class JobShopSchedulingCQM():
         min_time_limit = sampler.min_time_limit(self.cqm)
         if time_limit is not None:
             time_limit = max(min_time_limit, time_limit)
-        raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit, label='Job Shop Demo')
+        raw_sampleset = sampler.sample_cqm(self.cqm, time_limit=time_limit)
         self.feasible_sampleset = raw_sampleset.filter(lambda d: d.is_feasible)
         num_feasible = len(self.feasible_sampleset)
         if num_feasible > 0:
@@ -263,21 +263,21 @@ class JobShopSchedulingCQM():
         self.completion_time = self.best_sample['makespan']
 
 
-    def call_mip_solver(self, time_limit: int=100):
-        """This function calls the MIP solver and returns the solution
+    def call_scipy_solver(self, time_limit: int=100):
+        """This function calls the HiGHS via SciPy solver and returns the solution
 
         Args:
             time_limit (int, optional): The maximum amount of time to
-            allow the MIP solver to before returning. Defaults to 100.
+            allow the HiGHS solver to before returning. Defaults to 100.
 
         Modifies:
             self.solution: the solution to the problem
         """        
-        solver = mip_solver.MIPCQMSolver()
+        solver = scipy_solver.SciPyCQMSolver()
         sol = solver.sample_cqm(cqm=self.cqm, time_limit=time_limit)
         self.solution = {}
         if len(sol) == 0:
-            warnings.warn("Warning: MIP did not find feasible solution")
+            warnings.warn("Warning: HiGHS did not find feasible solution")
             return
         best_sol = sol.first.sample
         
@@ -305,7 +305,7 @@ class JobShopSchedulingCQM():
 def run_shop_scheduler(
     job_data: JobShopData,
     solver_time_limit: int = 60,
-    use_mip_solver: bool = False,
+    use_scipy_solver: bool = False,
     verbose: bool = False,
     allow_quadratic_constraints: bool = True,
     out_sol_file: str = None,
@@ -321,7 +321,7 @@ def run_shop_scheduler(
             scheduling problem.
         solver_time_limit (int, optional): Upperbound on how long the schedule can be; leave empty to 
             auto-calculate an appropriate value. Defaults to None.
-        use_mip_solver (bool, optional): Whether to use the MIP solver instead of the CQM solver.
+        use_scipy_solver (bool, optional): Whether to use the HiGHS via SciPy solver instead of the CQM solver.
             Defaults to False.
         verbose (bool, optional): Whether to print verbose output. Defaults to False.
         allow_quadratic_constraints (bool, optional): Whether to allow quadratic constraints. 
@@ -339,8 +339,8 @@ def run_shop_scheduler(
         Resource.
 
     """    
-    if allow_quadratic_constraints and use_mip_solver:
-        raise ValueError("Cannot use quadratic constraints with MIP solver")
+    if allow_quadratic_constraints and use_scipy_solver:
+        raise ValueError("Cannot use quadratic constraints with HiGHS solver")
     model_building_start = time()
     model = JobShopSchedulingCQM(model_data=job_data, max_makespan=max_makespan, greedy_multiplier=greedy_multiplier)
     model.define_cqm_model()
@@ -357,8 +357,8 @@ def run_shop_scheduler(
         print_cqm_stats(model.cqm)
     model_building_time = time() - model_building_start
     solver_start_time = time()
-    if use_mip_solver:
-        sol = model.call_mip_solver(time_limit=solver_time_limit)
+    if use_scipy_solver:
+        sol = model.call_scipy_solver(time_limit=solver_time_limit)
     else:
         model.call_cqm_solver(time_limit=solver_time_limit, model_data=job_data, profile=profile)
         sol = model.best_sample
@@ -414,8 +414,8 @@ if __name__ == "__main__":
                         help='path to the output plot file',
                         default='output/schedule.png')
     
-    parser.add_argument('-m', '--use_mip_solver', action='store_true',
-                        help='Whether to use the MIP solver instead of the CQM solver')
+    parser.add_argument('-m', '--use_scipy_solver', action='store_true',
+                        help='Whether to use the HiGHS solver instead of the CQM solver')
     
     parser.add_argument('-v', '--verbose', action='store_true', default=True,
                         help='Whether to print verbose output')
@@ -441,13 +441,13 @@ if __name__ == "__main__":
     allow_quadratic_constraints = args.allow_quad
     max_makespan = args.max_makespan
     profile = args.profile
-    use_mip_solver = args.use_mip_solver
+    use_scipy_solver = args.use_scipy_solver
     verbose = args.verbose
 
 
     job_data = JobShopData()
     job_data.load_from_file(input_file)
 
-    results = run_shop_scheduler(job_data, time_limit, verbose=verbose, use_mip_solver=use_mip_solver,
+    results = run_shop_scheduler(job_data, time_limit, verbose=verbose, use_scipy_solver=use_scipy_solver,
                           allow_quadratic_constraints=allow_quadratic_constraints, profile=profile,
                           max_makespan=max_makespan, out_sol_file=out_sol_file, out_plot_file=out_plot_file)
