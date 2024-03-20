@@ -127,7 +127,7 @@ class SciPyCQMSolver:
         run_time = time.perf_counter() - t
 
         # If we're infeasible, return an empty solution
-        if not solution.success:
+        if solution.x is None:
             return dimod.SampleSet.from_samples_cqm([], cqm, info=dict(run_time=run_time))
 
         # Otherwise we can just read the solution out and convert it into a
