@@ -45,12 +45,8 @@ def description_card():
     return html.Div(
         id="description-card",
         children=[
-            html.H5(HTML_CONFIGS['main_header']),
-            html.H3(HTML_CONFIGS['welcome_message']),
-            html.Div(
-                id="intro",
-                children=HTML_CONFIGS['welcome_instructions'],
-            ),
+            html.H1(HTML_CONFIGS['main_header']),
+            html.P(children=HTML_CONFIGS['welcome_instructions']),
         ],
     )
 
@@ -76,34 +72,34 @@ def generate_control_card() -> html.Div:
     return html.Div(
         id="control-card",
         children=[
-            html.P("Select Scenario", className='control-p'),
+            html.Label("Scenario (jobs x resources)"),
             dcc.Dropdown(
                 id="scenario-select",
                 options=scenario_options,
                 value=scenario_options[0]["value"],
                 clearable=False
             ),
-            html.P("Select Model", className='control-p'),
+            html.Label("Model"),
             dcc.Dropdown(
                 id="model-select",
                 options=model_options,
                 value=model_options[0]["value"],
                 clearable=False
             ),
-            html.P("Select Solver", className='control-p'),
+            html.Label("Solver"),
             dcc.Checklist(
                 id="solver-select",
                 options=solver_options,
                 value=[solver_options[0]["value"]],
             ),
-            html.P("Solver Time Limit", className='control-p'),
+            html.Label("Solver Time Limit"),
             dcc.Input(
-            id="solver_time_limit",
-            type='number',
-            value=HTML_CONFIGS['solver_options']['default_time_seconds'],
-            min=HTML_CONFIGS['solver_options']['min_time_seconds'],
-            max=HTML_CONFIGS['solver_options']['max_time_seconds'],
-            step=HTML_CONFIGS['solver_options']['time_step_seconds'],
+                id="solver_time_limit",
+                type='number',
+                value=HTML_CONFIGS['solver_options']['default_time_seconds'],
+                min=HTML_CONFIGS['solver_options']['min_time_seconds'],
+                max=HTML_CONFIGS['solver_options']['max_time_seconds'],
+                step=HTML_CONFIGS['solver_options']['time_step_seconds'],
             ),
             html.Div(
                 id="button-group",
@@ -132,78 +128,92 @@ def set_html(app):
                 className="banner",
                 children=[html.Img(src="assets/dwave_logo.svg")],
             ),
-            # Left column
             html.Div(
-                id="left-column",
-                className="four columns",
-                children=[description_card(), generate_control_card()]
-                + [
-                    html.Div(
-                        ["initial child"], id="output-clientside", style={"display": "none"}
-                    )
-                ],
-            ),
-            # Right column
-            html.Div(
-                id="right-column",
-                className="gantt-container",
+                id="columns",
                 children=[
-                    dcc.Tabs(id="tabs", value='input_tab', children=[
-                        dcc.Tab(label=HTML_CONFIGS['tabs']['input']['name'],
-                                value='input_tab',
-                                className='tab',
-                                children=[html.Div(
-                                    html.Div(
-                                    id="unscheduled_gantt_chart_card",
-                                    className="gantt-div",
-                                    children=[
-                                        html.B(HTML_CONFIGS['tabs']['input']['header'], className="gantt-title"),
-                                        html.Hr(className="gantt-hr"),
-                                        dcc.Loading(id = "loading-icon-input", children=[ 
-                                            dcc.Graph(id="unscheduld_gantt_chart"),
-                                        ],
-                                    )])
-                                )])
-                            ,
-                            dcc.Tab(label=HTML_CONFIGS['tabs']['dwave']['name'],
-                                    value='dwave_tab',
-                                    id='dwave_tab',
-                                    className='tab',
-                                    children=[html.Div(
-                                        html.Div(
-                                            id="optimized_gantt_chart_card",
+                    # Left column
+                    html.Div(
+                        id="left-column",
+                        children=[
+                            html.Div([
+                                html.Div([
+                                    description_card(),
+                                    generate_control_card(),
+                                    html.Div(["initial child"], id="output-clientside", style={"display": "none"}),
+                                ])
+                            ]),
+                            html.Div(
+                                html.Button(id="left-column-collapse", children=[html.Div()]),
+                            )
+                        ]
+                    ),
+                    # Right column
+                    html.Div(
+                        id="right-column",
+                        children=[
+                            dcc.Tabs(id="tabs", value='input_tab', children=[
+                                dcc.Tab(label=HTML_CONFIGS['tabs']['input']['name'],
+                                        value='input_tab',
+                                        className='tab',
+                                        children=[html.Div(
+                                            html.Div(
+                                            id="unscheduled_gantt_chart_card",
                                             className="gantt-div",
                                             children=[
-                                                html.B(HTML_CONFIGS['tabs']['dwave']['header'], className="gantt-title"),
-                                                html.Hr(className="gantt-hr"),
-                                                dcc.Loading(id = "loading-icon-dwave", 
-                                                children=[ 
-                                                        dcc.Graph(id="optimized_gantt_chart"),
+                                                html.H3(HTML_CONFIGS['tabs']['input']['header'], className="gantt-title"),
+                                                dcc.Loading(id = "loading-icon-input", children=[ 
+                                                    dcc.Graph(id="unscheduld_gantt_chart"),
+                                                ],
+                                            )])
+                                        )])
+                                    ,
+                                    dcc.Tab(label=HTML_CONFIGS['tabs']['dwave']['name'],
+                                            value='dwave_tab',
+                                            id='dwave_tab',
+                                            className='tab',
+                                            children=[html.Div(
+                                                html.Div(
+                                                    id="optimized_gantt_chart_card",
+                                                    className="gantt-div",
+                                                    children=[
+                                                        html.H3(HTML_CONFIGS['tabs']['dwave']['header'], className="gantt-title"),
+                                                        dcc.Loading(id = "loading-icon-dwave", 
+                                                        children=[ 
+                                                                dcc.Graph(id="optimized_gantt_chart"),
+                                                            ]
+                                                        ),
+                                                        dcc.Graph(id="dwave_summary_table")
+                                                    ]))
+                                                ])
+                                                ,
+                                    dcc.Tab(
+                                        label=HTML_CONFIGS['tabs']['classical']['name'],
+                                        id='mip_tab',
+                                        className='tab',
+                                        value='mip_tab', 
+                                        children=[
+                                            html.Div(
+                                                html.Div(
+                                                    id="mip_gantt_chart_card",
+                                                    className="gantt-div",
+                                                    children=[
+                                                        html.H3(HTML_CONFIGS['tabs']['classical']['header'], className="gantt-title"),
+                                                        dcc.Loading(id = "loading-icon-coinor", 
+                                                            children=[ 
+                                                                dcc.Graph(id="mip_gantt_chart")
+                                                                ]
+                                                            ),
+                                                        dcc.Graph(id="mip_summary_table")
                                                     ]
-                                                ),
-                                                dcc.Graph(id="dwave_summary_table")
-                                            ]))
-                                        ])
-                                        ,
-                            dcc.Tab(label=HTML_CONFIGS['tabs']['classical']['name'],
-                                    id='mip_tab',
-                                    className='tab',
-                                    value='mip_tab', 
-                                    children=[html.Div(
-                                        html.Div(
-                                            id="mip_gantt_chart_card",
-                                            className="gantt-div",
-                                            children=[
-                                                html.B(HTML_CONFIGS['tabs']['classical']['header'], className="gantt-title"),
-                                                html.Hr(className="gantt-hr"),
-                                                dcc.Loading(id = "loading-icon-coinor", 
-                                                    children=[ 
-                                                        dcc.Graph(id="mip_gantt_chart")
-                                                        ]
-                                                    ),
-                                                dcc.Graph(id="mip_summary_table")
-                                            ]))
-                                        ])
-                            ])
-                ])
-        ])
+                                                )
+                                            )
+                                        ]
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            )
+        ]
+    )

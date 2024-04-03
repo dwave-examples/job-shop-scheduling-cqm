@@ -7,7 +7,6 @@ import json
 HTML_CONFIGS = {
     'title': 'Job Shop Scheduling Demo',
     'main_header': "Job Shop Scheduling",
-    'welcome_message': "Welcome to the Job Shop Scheduling Dashboard",
     'welcome_instructions': "Run the job shop scheduling problem for several different scenarios. Explore the Gantt Chart for solution details",
     "solver_options": {
         "min_time_seconds": 5,
@@ -29,7 +28,7 @@ HTML_CONFIGS = {
     "tabs": {
         "input": {
             "name": "Input",
-            "header": "Jobs to be Scheduled",
+            "header": "Unscheduled Jobs and Resources",
         },
         "classical": {
             "name": "Classical",

@@ -66,6 +66,29 @@ DATA_PATH = BASE_PATH.joinpath("input").resolve()
 model_data = JobShopData()
 
 
+@app.callback(
+    Output("left-column", "className"),
+    inputs=[
+        Input("left-column-collapse", "n_clicks"),
+        State("left-column", "className"),
+    ],
+    prevent_initial_call=True,
+)
+def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
+    """Toggles left column 'collapsed' class that hides and shows the left column.
+
+    Args:
+        left_column_collapse (int): The (total) number of times the collapse button has been clicked.
+        class_name (str): Current class name of the left column, 'collapsed' if not visible, empty string if visible
+
+    Returns:
+        str: The new class name of the left column.
+    """
+    if class_name:
+        return ""
+    return "collapsed"
+
+
 def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
     """This function takes a JobShopData object and gets the minimum time each
     task can be completed by, considering the precedence tasks. This function
@@ -225,8 +248,10 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
         State("scenario-select", "value"),
         State("solver_time_limit", "value"),
     ],
-    running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'}),
-             (Output("run-button", "disabled"), True, False)],
+    running=[
+                (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
+                (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+            ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True
 )
