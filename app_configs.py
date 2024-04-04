@@ -45,13 +45,13 @@ HTML_CONFIGS = {
 
 # The list of scenarios that the user can choose from in the app
 SCENARIOS = {
-    '3x3': "instance3_3.txt",
-    '5x5': "instance5_5.txt",
-    '10x10': "instance10_10.txt",
     '15x15': "taillard15_15.txt",
-    '20x15': "instance20_15.txt",
-    '20x25': "instance20_25.txt",
-    '30x30': "instance30_30.txt"
+    '20x15': "taillard20_15.txt",
+    '20x20': "taillard20_20.txt",
+    '30x15': "taillard30_15.txt",
+    '30x20': "taillard30_20.txt",
+    '50x15': "taillard50_15.txt",
+    '50x20': "taillard50_20.txt",
 }
 
 # The list of models that the user can choose from in the app
