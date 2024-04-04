@@ -104,14 +104,14 @@ def generate_control_card() -> html.Div:
             html.Div(
                 id="button-group",
                 children=[
-                    html.Button(id="run-button", children="Run Optimization", className='run-button', n_clicks=0, disabled=False),
+                    html.Button(id="run-button", children="Run Optimization", className='run-button', n_clicks=0),
                     html.Button(
                         id="cancel-button",
                         children="Cancel Optimization",
                         className='cancel-button',
                         n_clicks=0,
-                        style={"visibility": "hidden"}
-                        )
+                        style={"display": "none"}
+                    )
                 ]
             ),
         ],
@@ -151,41 +151,55 @@ def set_html(app):
                     html.Div(
                         id="right-column",
                         children=[
-                            dcc.Tabs(id="tabs", value='input_tab', children=[
-                                dcc.Tab(label=HTML_CONFIGS['tabs']['input']['name'],
+                            dcc.Tabs(
+                                id="tabs",
+                                value='input_tab',
+                                children=[
+                                    dcc.Tab(
+                                        label=HTML_CONFIGS['tabs']['input']['name'],
                                         value='input_tab',
                                         className='tab',
-                                        children=[html.Div(
+                                        children=[
                                             html.Div(
-                                            id="unscheduled_gantt_chart_card",
-                                            className="gantt-div",
-                                            children=[
-                                                html.H3(HTML_CONFIGS['tabs']['input']['header'], className="gantt-title"),
-                                                dcc.Loading(id = "loading-icon-input", children=[ 
-                                                    dcc.Graph(id="unscheduld_gantt_chart"),
-                                                ],
-                                            )])
-                                        )])
-                                    ,
-                                    dcc.Tab(label=HTML_CONFIGS['tabs']['dwave']['name'],
-                                            value='dwave_tab',
-                                            id='dwave_tab',
-                                            className='tab',
-                                            children=[html.Div(
+                                                html.Div(
+                                                    id="unscheduled_gantt_chart_card",
+                                                    className="gantt-div",
+                                                    children=[
+                                                        html.H3(HTML_CONFIGS['tabs']['input']['header'], className="gantt-title"),
+                                                        dcc.Loading(
+                                                            id="loading-icon-input",
+                                                            children=[ 
+                                                                dcc.Graph(id="unscheduld_gantt_chart"),
+                                                            ],
+                                                        )
+                                                    ]
+                                                )
+                                            )
+                                        ]
+                                    ),
+                                    dcc.Tab(
+                                        label=HTML_CONFIGS['tabs']['dwave']['name'],
+                                        value='dwave_tab',
+                                        id='dwave_tab',
+                                        className='tab',
+                                        children=[
+                                            html.Div(
                                                 html.Div(
                                                     id="optimized_gantt_chart_card",
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(HTML_CONFIGS['tabs']['dwave']['header'], className="gantt-title"),
-                                                        dcc.Loading(id = "loading-icon-dwave", 
+                                                        dcc.Graph(id="dwave_summary_table"),
+                                                        dcc.Loading(id="loading-icon-dwave",
                                                         children=[ 
                                                                 dcc.Graph(id="optimized_gantt_chart"),
                                                             ]
-                                                        ),
-                                                        dcc.Graph(id="dwave_summary_table")
-                                                    ]))
-                                                ])
-                                                ,
+                                                        )
+                                                    ]
+                                                )
+                                            )
+                                        ]
+                                    ),
                                     dcc.Tab(
                                         label=HTML_CONFIGS['tabs']['classical']['name'],
                                         id='mip_tab',
@@ -198,12 +212,13 @@ def set_html(app):
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(HTML_CONFIGS['tabs']['classical']['header'], className="gantt-title"),
-                                                        dcc.Loading(id = "loading-icon-coinor", 
+                                                        dcc.Graph(id="mip_summary_table"),
+                                                        dcc.Loading(
+                                                            id="loading-icon-coinor",
                                                             children=[ 
                                                                 dcc.Graph(id="mip_gantt_chart")
-                                                                ]
-                                                            ),
-                                                        dcc.Graph(id="mip_summary_table")
+                                                            ]
+                                                        )
                                                     ]
                                                 )
                                             )
