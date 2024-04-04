@@ -16,10 +16,10 @@ HTML_CONFIGS = {
         "default_time_seconds": 5
     },
     "solver_messages": {
-        "mip": {
-            "quadratic_error": "Unable to run MIP solver with quadratic constraints",
-            "no_solution": "No solution found for MIP solver",
-            "solver_not_chosen": "Select COIN-OR Branch and Cut Solver to run this solver"
+        "highs": {
+            "quadratic_error": "Unable to run HiGHS solver with quadratic constraints",
+            "no_solution": "No solution found for HiGHS solver",
+            "solver_not_chosen": "Select HiGHS Classical Solver to run this solver"
             },
         'dwave': {
             "no_solution": "No solution found for D-Wave solver",
@@ -33,7 +33,7 @@ HTML_CONFIGS = {
         },
         "classical": {
             "name": "Classical",
-            "header": "COIN-OR Branch-and-Cut Solver",
+            "header": "HiGHS Classical Solver",
         },
         "dwave": {
             "name": "D-Wave",
@@ -45,25 +45,25 @@ HTML_CONFIGS = {
 
 # The list of scenarios that the user can choose from in the app
 SCENARIOS = {
-    '3x3': "instance3_3.txt",
-    '5x5': "instance5_5.txt",
-    '10x10': "instance10_10.txt",
     '15x15': "taillard15_15.txt",
-    '20x15': "instance20_15.txt",
-    '20x25': "instance20_25.txt",
-    '30x30': "instance30_30.txt"
+    '20x15': "taillard20_15.txt",
+    '20x20': "taillard20_20.txt",
+    '30x15': "taillard30_15.txt",
+    '30x20': "taillard30_20.txt",
+    '50x15': "taillard50_15.txt",
+    '50x20': "taillard50_20.txt",
 }
 
 # The list of models that the user can choose from in the app
 MODEL_OPTIONS = {
-    "Mixed Integer Model": "MIP",
-    "Mixed Integer Quadratic Model": "QM",
+    "Mixed Integer Linear Model": "MILP",
+    "Mixed Integer Quadratic Model": "MIQP",
 }
 
 # The list of solvers that the user can choose from in the app
 SOLVER_OPTIONS = {
     "D-Wave Hybrid Solver": "Hybrid",
-    "COIN-OR Branch-and-Cut Solver (CBC)": "MIP"
+    "HiGHS Classical Solver": "HiGHS"
 }
 
 # The list of resources that the user can choose from in the app

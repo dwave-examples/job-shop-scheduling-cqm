@@ -27,7 +27,7 @@ This will call the job shop scheduling algorithm for the input instance file. Co
 - -tl (--time_limit) time limit in seconds (default: None)
 -  -os (--output_solution): path to the output solution file (default: output/solution.txt)
 -  -op (--output_plot): path to the output plot file (default: output/schedule.png)
--  -m (--use_mip_solver): Whether to use the MIP solver instead of the CQM solver (default: False)
+-  -m (--use_scipy_solver): Whether to use the HiGHS via SciPy solver instead of the CQM solver (default: False)
 -  -v (--verbose): Whether to print verbose output (default: True)
 -  -q (--allow_quad): Whether to allow quadratic constraints (default: False)
 -  -p (--profile): The profile variable to pass to the Sampler. Defaults to None. (default: None)
