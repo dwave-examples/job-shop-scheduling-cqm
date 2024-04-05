@@ -32,7 +32,6 @@ Apache License, Version 2.0
 
 import dash
 from dash import dcc, html
-from dash.dependencies import Input
 
 from app_configs import SCENARIOS, MODEL_OPTIONS, SOLVER_OPTIONS, HTML_CONFIGS
 
@@ -77,14 +76,16 @@ def generate_control_card() -> html.Div:
                 id="scenario-select",
                 options=scenario_options,
                 value=scenario_options[0]["value"],
-                clearable=False
+                clearable=False,
+                searchable=False,
             ),
             html.Label("Model"),
             dcc.Dropdown(
                 id="model-select",
                 options=model_options,
                 value=model_options[0]["value"],
-                clearable=False
+                clearable=False,
+                searchable=False,
             ),
             html.Label("Solver"),
             dcc.Checklist(
@@ -104,11 +105,10 @@ def generate_control_card() -> html.Div:
             html.Div(
                 id="button-group",
                 children=[
-                    html.Button(id="run-button", children="Run Optimization", className='run-button', n_clicks=0),
+                    html.Button(id="run-button", children="Run Optimization", n_clicks=0),
                     html.Button(
                         id="cancel-button",
                         children="Cancel Optimization",
-                        className='cancel-button',
                         n_clicks=0,
                         style={"display": "none"}
                     )
@@ -135,8 +135,8 @@ def set_html(app):
                     html.Div(
                         id="left-column",
                         children=[
-                            html.Div([
-                                html.Div([
+                            html.Div([ # Fixed width Div to collapse
+                                html.Div([ # Padding and content wrapper
                                     description_card(),
                                     generate_control_card(),
                                     html.Div(["initial child"], id="output-clientside", style={"display": "none"}),
@@ -169,7 +169,7 @@ def set_html(app):
                                                         dcc.Loading(
                                                             id="loading-icon-input",
                                                             children=[ 
-                                                                dcc.Graph(id="unscheduld_gantt_chart"),
+                                                                dcc.Graph(id="unscheduled_gantt_chart", responsive=True),
                                                             ],
                                                         )
                                                     ]
@@ -189,12 +189,8 @@ def set_html(app):
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(HTML_CONFIGS['tabs']['dwave']['header'], className="gantt-title"),
+                                                        dcc.Graph(id="optimized_gantt_chart", responsive=True),
                                                         dcc.Graph(id="dwave_summary_table"),
-                                                        dcc.Loading(id="loading-icon-dwave",
-                                                        children=[ 
-                                                                dcc.Graph(id="optimized_gantt_chart"),
-                                                            ]
-                                                        )
                                                     ]
                                                 )
                                             )
@@ -204,7 +200,7 @@ def set_html(app):
                                         label=HTML_CONFIGS['tabs']['classical']['name'],
                                         id='mip_tab',
                                         className='tab',
-                                        value='mip_tab', 
+                                        value='mip_tab',
                                         children=[
                                             html.Div(
                                                 html.Div(
@@ -212,13 +208,8 @@ def set_html(app):
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(HTML_CONFIGS['tabs']['classical']['header'], className="gantt-title"),
+                                                        dcc.Graph(id="mip_gantt_chart", responsive=True),
                                                         dcc.Graph(id="mip_summary_table"),
-                                                        dcc.Loading(
-                                                            id="loading-icon-coinor",
-                                                            children=[ 
-                                                                dcc.Graph(id="mip_gantt_chart")
-                                                            ]
-                                                        )
                                                     ]
                                                 )
                                             )

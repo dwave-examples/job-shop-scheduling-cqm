@@ -94,16 +94,14 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
     Output('solver-select', 'value'),
     inputs=[
         Input('model-select', 'value'),
-        Input('solver-select', 'value'),
     ],
     prevent_initial_call=True
 )
-def update_solver_options(model_value: str, solver_value: list[str]) -> list[str]:
+def update_solver_options(model_value: str) -> list[str]:
     """Hides and shows classical solver option using 'hide-classic' class
 
     Args:
         model_value (str): Currently selected model from model-select dropdown.
-        solver_value (list): A list of currently selected solver options.
 
     Returns:
         str: The new class name of the solver-select checklist.
@@ -276,9 +274,9 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
         State("solver_time_limit", "value"),
     ],
     running=[
-                (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
-                (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
-            ],
+        (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
+        (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+    ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True
 )
@@ -337,15 +335,18 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
     Output('mip_summary_table', 'figure'),
     Output('mip_tab', 'className'),
     Output('mip_summary_table', 'style'),
-    [
+    background=True,
+    inputs=[
         Input('run-button', 'n_clicks'),
         State("model-select", "value"),
         State("solver-select", "value"),
         State("scenario-select", "value"),
         State("solver_time_limit", "value")
     ],
-    running=[(Output("cancel-button", "style"), {"visibility": "visible"}, {'visibility': 'hidden'}),
-             (Output("run-button", "style"), {"visibility": "hidden"}, {'visibility': 'visible'})],
+    running=[
+        (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
+        (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+    ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True
 )
@@ -421,7 +422,7 @@ def run_optimization_mip(run_click: int,
 
 
 @app.callback(
-    Output('unscheduld_gantt_chart', 'figure'),
+    Output('unscheduled_gantt_chart', 'figure'),
     [
         Input("scenario-select", "value"),
     ]
