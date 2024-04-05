@@ -112,6 +112,10 @@ label {
     display: flex;
 }
 
+#solver-select.hide-classic label:last-child {
+    display: none !important;
+}
+
 input[type="checkbox"] {
     margin: 0 1rem 0 0;
 }
@@ -302,15 +306,15 @@ button:not(#left-column-collapse) {
 }
 
 .tab-fail {
-    border-top: 2px solid red !important;
+    border-top: 3px solid var(--red-light) !important;
 }
 
 .tab-success {
-    border-top: 2px solid green !important;
+    border-top: 3px solid var(--teal-darker) !important;
 }
 
 .tab-warning {
-    border-top: 2px solid orange !important;
+    border-top: 3px solid var(--orange) !important;
 }
 
 #solver_time_limit {

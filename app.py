@@ -89,6 +89,33 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
     return "collapsed"
 
 
+@app.callback(
+    Output('solver-select', 'className'),
+    Output('solver-select', 'value'),
+    inputs=[
+        Input('model-select', 'value'),
+        Input('solver-select', 'value'),
+    ],
+    prevent_initial_call=True
+)
+def update_solver_options(model_value: str, solver_value: list[str]) -> list[str]:
+    """Hides and shows classical solver option using 'hide-classic' class
+
+    Args:
+        model_value (str): Currently selected model from model-select dropdown.
+        solver_value (list): A list of currently selected solver options.
+
+    Returns:
+        str: The new class name of the solver-select checklist.
+        list: Unselects MIP and selects Hybrid or no update.
+    """
+
+    if model_value == 'QM':
+        return 'hide-classic', ['Hybrid']
+    return '', dash.no_update
+
+
+
 def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
     """This function takes a JobShopData object and gets the minimum time each
     task can be completed by, considering the precedence tasks. This function
