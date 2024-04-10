@@ -48,9 +48,9 @@ def description_card():
     )
 
 def generate_control_card() -> html.Div:
-    """
-    This function generates the control card for the dashboard, which
-    contains the dropdowns for selecting the scenario, model, and solver.
+    """Generates the control card for the dashboard.
+
+    Contains the dropdowns for selecting the scenario, model, and solver.
 
     Returns:
         html.Div: A Div containing the dropdowns for selecting the scenario,
