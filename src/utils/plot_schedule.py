@@ -24,10 +24,10 @@ def plot_solution(job_data, solution: dict, location: str = None) -> tuple:
     job_start_time = defaultdict(list)
     processing_time = defaultdict(list)
     for j in job_data.jobs:
-        job_start_time[j] = [solution[(j, i)][1] for i in
-                             job_data.resources]
-        processing_time[j] = [job_data.get_resource_job_tasks(i, j).duration
-                               for i in job_data.resources]
+        job_start_time[j] = [solution[(j, i)][1] for i in job_data.resources]
+        processing_time[j] = [
+            job_data.get_resource_job_tasks(i, j).duration for i in job_data.resources
+        ]
     if location is not None:
         plot_schedule_core(job_start_time, processing_time, location)
     return job_start_time, processing_time
@@ -61,8 +61,7 @@ def read_solution(path: str) -> tuple:
     return job_start_time, processing_time
 
 
-def plot_schedule_core(job_start_time: dict, processing_time: dict,
-                       location) -> None:
+def plot_schedule_core(job_start_time: dict, processing_time: dict, location) -> None:
     """This function plots job shop problem
     Args:
         job_start_time: start time of each job on each machine
@@ -75,11 +74,10 @@ def plot_schedule_core(job_start_time: dict, processing_time: dict,
     solsT = sols.transpose()
     dursT = durs.transpose()
     n, m = sols.shape
-    labels = ['machine ' + str(i) for i in range(m)]
-    category_names = ['job ' + str(i) for i in range(n)]
+    labels = ["machine " + str(i) for i in range(m)]
+    category_names = ["job " + str(i) for i in range(n)]
 
-    category_colors = plt.get_cmap('RdYlGn')(
-        np.linspace(0.15, 0.85, sols.shape[0]))
+    category_colors = plt.get_cmap("RdYlGn")(np.linspace(0.15, 0.85, sols.shape[0]))
     fig, ax = plt.subplots()
     ax.invert_yaxis()
     ax.xaxis.set_visible(True)
@@ -87,41 +85,38 @@ def plot_schedule_core(job_start_time: dict, processing_time: dict,
     for i, (colname, color) in enumerate(zip(category_names, category_colors)):
         widths = dursT[:, i]
         starts = solsT[:, i]
-        ax.barh(labels, widths, left=starts, height=.5,
-                label=colname)
+        ax.barh(labels, widths, left=starts, height=0.5, label=colname)
         xcenters = starts + widths / 2
         r, g, b, _ = color
-        text_color = 'white'
+        text_color = "white"
         for y, (x, c) in enumerate(zip(xcenters, widths)):
             if c > 0:
-                ax.text(x, y, str(int(c)), ha='center', va='center',
-                        color=text_color)
-    ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1),
-              loc='lower left', fontsize='small')
+                ax.text(x, y, str(int(c)), ha="center", va="center", color=text_color)
+    ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1), loc="lower left", fontsize="small")
 
     plt.savefig(location)
 
-    print(f'Saved plot to {os.path.join(os.getcwd(), location)}')
+    print(f"Saved plot to {os.path.join(os.getcwd(), location)}")
 
     return
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Plot a schedule given by a JSS solution file.',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        description="Plot a schedule given by a JSS solution file.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
 
-    parser.add_argument('-s', type=str,
-                        help='path to the input solution file')
+    parser.add_argument("-s", type=str, help="path to the input solution file")
 
-    parser.add_argument('-op', type=str,
-                        help='path to the output plot file',
-                        default="schedule.png")
+    parser.add_argument(
+        "-op", type=str, help="path to the output plot file", default="schedule.png"
+    )
 
     args = parser.parse_args()
     input_solution = args.s
     out_solution = args.op
     job_start_time, processing_time = read_solution(input_solution)
     plot_schedule_core(job_start_time, processing_time, out_solution)
-    plt.savefig('schedule.png')
+    plt.savefig("schedule.png")
     plt.show()
