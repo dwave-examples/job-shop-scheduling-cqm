@@ -123,6 +123,7 @@ def set_html(app):
     app.layout = html.Div(
         id="app-container",
         children=[
+            dcc.Store("last-selected-solvers"),
             # Banner
             html.Div(
                 id="banner",

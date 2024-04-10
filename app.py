@@ -94,25 +94,31 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
 @app.callback(
     Output("solver-select", "className"),
     Output("solver-select", "value"),
+    Output("last-selected-solvers", "data"),
     inputs=[
         Input("model-select", "value"),
+        State("solver-select", "value"),
+        State("last-selected-solvers", "data"),
     ],
     prevent_initial_call=True,
 )
-def update_solver_options(model_value: str) -> list[str]:
+def update_solver_options(model_value: str, selected_solvers: list[str], last_selected_solvers: list[str]) -> list[str]:
     """Hides and shows classical solver option using 'hide-classic' class
 
     Args:
         model_value (str): Currently selected model from model-select dropdown.
+        selected_solvers (list[str]): Currently selected solvers.
+        last_selected_solvers (list[str]): Previously selected solvers.
 
     Returns:
         str: The new class name of the solver-select checklist.
-        list: Unselects MIP and selects Hybrid or no update.
+        list: Unselects MIP and selects Hybrid or updates to previously selected solvers.
+        list: Updates last_selected_solvers with the list of solvers that were selected before updating.
     """
 
     if model_value == "QM":
-        return "hide-classic", ["Hybrid"]
-    return "", dash.no_update
+        return "hide-classic", ["Hybrid"], selected_solvers
+    return "", last_selected_solvers, dash.no_update
 
 
 def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
