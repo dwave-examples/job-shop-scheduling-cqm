@@ -29,7 +29,7 @@ Apache License, Version 2.0
 (see ./LICENSE for details)
 
 '''
-
+from __future__ import annotations
 import dash
 from dash import dcc, html
 
