@@ -115,16 +115,15 @@ def update_solver_options(model_value: str) -> list[str]:
 
 
 def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
-    """This function takes a JobShopData object and gets the minimum time each
-    task can be completed by, considering the precedence tasks. This function
-    is used to generate the Jobs to Be Scheduled Gantt chart.
+    """Takes a JobShopData object, gets the minimum time each
+    task can be completed by, and generates the Jobs to Be Scheduled
+    Gantt chart.
 
     Args:
         job_shop_data (JobShopData): The data for the job shop scheduling problem.
 
     Returns:
-        pd.DataFrame: A DataFrame that can be used to generate a Gantt chart in the
-        dashboard. The DataFrame has the following columns: Task, Start, Finish, 
+        pd.DataFrame: A DataFrame of the jobs to be scheduled including Task, Start, Finish, 
         Resource, and delta.
     """
     task_data = []
@@ -141,15 +140,15 @@ def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
     return df
 
 def get_empty_figure(message: str) -> go.Figure:
-    """This function generates an empty chart figure, with a message
-    in the center of the chart. This is used to replace the chart object
+    """Generates an empty chart figure message.
+    This is used to replace the chart object
     when no chart is available.
 
     Args:
         message (str): The message to display in the center of the chart.
 
     Returns:
-        go.Figure: A Plotly figure object with the input data.
+        go.Figure: A Plotly figure object containing the message.
     """    
     fig = go.Figure()
     fig.update_layout(
@@ -183,26 +182,20 @@ def get_empty_figure(message: str) -> go.Figure:
     prevent_initial_call=False
 )
 def load_initial_figures(n_clicks: int) -> \
-    tuple[go.Figure, go.Figure, str, str]:
-    """This function loads the initial figures for the Gantt charts.
-    It will only be used on the initial load; after that this will
-    pass PreventUpdate
+    tuple[go.Figure, go.Figure, go.Figure, go.Figure, dict, dict]:
+    """Loads the initial figures for the Gantt charts.
 
     Args:
         n_clicks (int): The number of times the run button has been
         clicked.
 
-    Raises:
-        PreventUpdate: If the run button has already been clicked,
-        this will raise PreventUpdate to prevent the initial figures
-        from being loaded again.
-
     Returns:
-        tuple: A tuple of two Plotly figures and two strings. The first
-        figure is the Gantt chart for the D-Wave hybrid solver, the second
-        figure is the Gantt chart for the COIN-OR Branch-and-Cut solver,
-        the first string is the style for the D-Wave summary table, and
-        the second string is the style for the COIN-OR summary table.
+        go.Figure: Gantt chart for the D-Wave hybrid solver
+        go.Figure: Gantt chart for the Classical solver
+        go.Figure: Results table for the D-Wave hybrid solver
+        go.Figure: Results table for the Classical solver
+        dict: Style for the D-Wave summary table
+        dict: Style for the Classical summary table
     """    
     if n_clicks == 0:
         empty_figure = get_empty_figure('Run optimization to see results')
@@ -227,7 +220,7 @@ def load_initial_figures(n_clicks: int) -> \
 )
 def update_tab_loading_state(run_click: int, cancel_click: int) -> \
     tuple[str, str, go.Figure, go.Figure, dict, dict]:
-    """This function updates the tab loading state after the run button
+    """Updates the tab loading state after the run button
     or cancel button has been clicked. 
 
     Args:
@@ -236,15 +229,13 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
         cancel_click (int): The number of times the cancel button has
             been clicked.
 
-    Raises:
-        PreventUpdate: If the event is triggered by anything other than 
-            the run button or cancel button, this will raise PreventUpdate
-            to prevent the tab loading state from being updated.
-
     Returns:
-        tuple: A tuple of four objects: the class name for the D-Wave tab,
-        the class name for the Classical tab, the figure for the D-Wave tab,
-        and the figure for the Classical  tab.
+        str: Class name for the D-Wave tab
+        str: Class name for the Classical tab
+        go.Figure: Figure for the D-Wave tab
+        go.Figure: Figure for the Classical tab
+        dict: Style for the D-Wave summary table
+        dict: Style for the Classical summary table
     """    
     if ctx.triggered_id == "run-button":
         if run_click == 0:
@@ -281,8 +272,8 @@ def update_tab_loading_state(run_click: int, cancel_click: int) -> \
     prevent_initial_call=True
 )
 def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str, time_limit: int) \
-    -> tuple[go.Figure, go.Figure, str, str]:
-    """This function runs the optimization using the D-Wave hybrid solver.
+    -> tuple[go.Figure, go.Figure, str, dict]:
+    """Runs optimization using the D-Wave hybrid solver.
 
     Args:
         run_click (int): The number of times the run button has been
@@ -292,15 +283,11 @@ def run_optimization_cqm(run_click: int, model: str, solver: str, scenario: str,
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
-    Raises:
-        PreventUpdate: If this was not triggered by a run-button click,
-            this will raise PreventUpdate to prevent the optimization
-            from running.
-
     Returns:
-        tuple: A tuple of four objects: the Plotly figure for the Gantt
-            chart, the Plotly figure for the output table, the class name
-            for the tab, and the style for the output table.
+        go.Figure: Gantt chart for the D-Wave hybrid solver
+        go.Figure: Results table for the D-Wave hybrid solver
+        str: Class name for the D-Wave tab
+        dict: Style for the D-Wave summary table
     """    
     if run_click == 0 or ctx.triggered_id != "run-button":
         empty_figure = get_empty_figure('Run optimization to see results')
@@ -355,8 +342,8 @@ def run_optimization_mip(run_click: int,
                          solver: str,
                          scenario: str,
                          time_limit: int) \
-                         -> tuple[go.Figure, go.Figure, str, str]:
-    """This function runs the optimization using the COIN-OR Branch-and-Cut solver.
+                         -> tuple[go.Figure, go.Figure, str, dict]:
+    """Runs optimization using the COIN-OR Branch-and-Cut solver.
 
     Args:
         run_click (int): The number of times the run button has been
@@ -366,15 +353,11 @@ def run_optimization_mip(run_click: int,
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
-    Raises:
-        PreventUpdate: If this was not triggered by a run-button click,
-            this will raise PreventUpdate to prevent the optimization
-            from running.
-
     Returns:
-        tuple: A tuple of four objects: the Plotly figure for the Gantt
-            chart, the Plotly figure for the output table, the class name
-            for the tab, and the style for the output table.
+        go.Figure: Gantt chart for the Classical solver
+        go.Figure: Results table for the Classical solver
+        str: Class name for the Classical tab
+        dict: Style for the Classical summary table
     """    
     if run_click == 0:
         empty_figure = get_empty_figure('Run optimization to see results')
@@ -502,7 +485,7 @@ def generate_gantt_chart(
 def generate_output_table(make_span: int, 
                           solver_time_limit: int, 
                           total_time: int) -> go.Figure:
-    """This function generates an output table for the optimization results.
+    """Generates an output table for the optimization results.
     The table will contain the make-span, solver time limit, and total time
     for the optimization.
 
