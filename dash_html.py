@@ -38,9 +38,7 @@ from app_configs import SCENARIOS, MODEL_OPTIONS, SOLVER_OPTIONS, HTML_CONFIGS
 
 
 def description_card():
-    """
-    :return: A Div containing dashboard title & descriptions.
-    """
+    """A Div containing dashboard title & descriptions."""
     return html.Div(
         id="description-card",
         children=[
