@@ -16,8 +16,8 @@ import itertools
 import time
 import typing
 
-import mip
 import dimod
+import mip
 
 
 class MIPCQMSolver:

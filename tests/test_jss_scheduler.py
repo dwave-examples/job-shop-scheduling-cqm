@@ -1,15 +1,15 @@
-import unittest
 import os
-import sys
 import subprocess
+import sys
+import unittest
 
-from dimod import sym, BINARY, INTEGER
+from dimod import BINARY, INTEGER, sym
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append('../')
+import src.utils.plot_schedule as job_plotter
 from src.job_shop_scheduler import JobShopSchedulingCQM
 from src.model_data import JobShopData
-import src.utils.plot_schedule as job_plotter
 
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

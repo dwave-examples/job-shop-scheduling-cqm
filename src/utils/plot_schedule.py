@@ -1,9 +1,9 @@
+import argparse
 import os
 from collections import defaultdict
 
-import numpy as np
-import argparse
 import matplotlib
+import numpy as np
 
 try:
     import matplotlib.pyplot as plt

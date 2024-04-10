@@ -30,11 +30,11 @@ Apache License, Version 2.0
 
 '''
 from __future__ import annotations
+
 import dash
 from dash import dcc, html
 
-from app_configs import SCENARIOS, MODEL_OPTIONS, SOLVER_OPTIONS, HTML_CONFIGS
-
+from app_configs import HTML_CONFIGS, MODEL_OPTIONS, SCENARIOS, SOLVER_OPTIONS
 
 
 def description_card():

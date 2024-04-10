@@ -4,22 +4,22 @@ solve a Job Shop Scheduling problem using CQM.
 
 '''
 
-from time import time
-import warnings
-
-from tabulate import tabulate
 import argparse
-from dimod import ConstrainedQuadraticModel, Binary, Integer
-from dwave.system import LeapHybridCQMSampler
-import pandas as pd
-
 import sys
+import warnings
+from time import time
+
+import pandas as pd
+from dimod import Binary, ConstrainedQuadraticModel, Integer
+from dwave.system import LeapHybridCQMSampler
+from tabulate import tabulate
+
 sys.path.append('./src')
-from utils.utils import print_cqm_stats, write_solution_to_file
-import utils.plot_schedule as job_plotter
 import utils.mip_solver as mip_solver
-from utils.greedy import GreedyJobShop
+import utils.plot_schedule as job_plotter
 from model_data import JobShopData
+from utils.greedy import GreedyJobShop
+from utils.utils import print_cqm_stats, write_solution_to_file
 
 
 def generate_greedy_makespan(job_data: JobShopData, num_samples: int=100) -> int:

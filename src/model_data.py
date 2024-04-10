@@ -1,9 +1,10 @@
-from collections.abc import Iterable
 import json
-
 import sys
+from collections.abc import Iterable
+
 sys.path.append('./src')
 from utils.utils import read_instance, read_taillard_instance
+
 
 class Task:
     """This class represents a task in a job shop scheduling problem.

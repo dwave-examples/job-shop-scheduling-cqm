@@ -30,24 +30,26 @@ Apache License, Version 2.0
 
 '''
 
+import pathlib
 import time
 
 import dash
-from dash import ctx, DiskcacheManager
-from dash.dependencies import Input, Output, ClientsideFunction, State
-from dash.exceptions import PreventUpdate
-from dash_html import set_html
-import plotly.graph_objs as go
-import plotly.express as px
-import pandas as pd
-import pathlib
 import diskcache
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objs as go
+from dash import DiskcacheManager, ctx
+from dash.dependencies import ClientsideFunction, Input, Output, State
+from dash.exceptions import PreventUpdate
+
+from dash_html import set_html
+
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
-from src.model_data import JobShopData
+from app_configs import HTML_CONFIGS, RESOURCE_NAMES, SCENARIOS
 from src.job_shop_scheduler import run_shop_scheduler
-from app_configs import SCENARIOS, RESOURCE_NAMES, HTML_CONFIGS
+from src.model_data import JobShopData
 
 app = dash.Dash(
     __name__,

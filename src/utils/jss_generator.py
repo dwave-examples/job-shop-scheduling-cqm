@@ -1,9 +1,9 @@
+import argparse
 import os
 import random
 from collections import defaultdict
 
 from tabulate import tabulate
-import argparse
 
 
 def generate_random_jss(n_jobs: int, n_machine: int, max_operation_time: int,

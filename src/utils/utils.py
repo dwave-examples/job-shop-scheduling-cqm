@@ -1,8 +1,8 @@
-from collections import defaultdict
-from tabulate import tabulate
 import os
+from collections import defaultdict
 
-from dimod import BINARY, INTEGER, sym, ConstrainedQuadraticModel
+from dimod import BINARY, INTEGER, ConstrainedQuadraticModel, sym
+from tabulate import tabulate
 
 
 def print_cqm_stats(cqm: ConstrainedQuadraticModel) -> None:

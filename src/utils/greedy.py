@@ -1,9 +1,10 @@
 '''
 This file will greedily generate a solution for the job shop problem
 '''
+import sys
+
 import numpy as np
 
-import sys
 sys.path.append('./src')
 from model_data import JobShopData
 
