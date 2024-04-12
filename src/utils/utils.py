@@ -1,8 +1,8 @@
-from collections import defaultdict
-from tabulate import tabulate
 import os
+from collections import defaultdict
 
-from dimod import BINARY, INTEGER, sym, ConstrainedQuadraticModel
+from dimod import BINARY, INTEGER, ConstrainedQuadraticModel, sym
+from tabulate import tabulate
 
 
 def print_cqm_stats(cqm: ConstrainedQuadraticModel) -> None:
@@ -18,39 +18,47 @@ def print_cqm_stats(cqm: ConstrainedQuadraticModel) -> None:
     num_integers = sum(cqm.vartype(v) is INTEGER for v in cqm.variables)
     num_discretes = len(cqm.discrete)
     num_linear_constraints = sum(
-        constraint.lhs.is_linear() for constraint in cqm.constraints.values())
+        constraint.lhs.is_linear() for constraint in cqm.constraints.values()
+    )
     num_quadratic_constraints = sum(
-        not constraint.lhs.is_linear() for constraint in
-        cqm.constraints.values())
+        not constraint.lhs.is_linear() for constraint in cqm.constraints.values()
+    )
     num_le_inequality_constraints = sum(
-        constraint.sense is sym.Sense.Le for constraint in
-        cqm.constraints.values())
+        constraint.sense is sym.Sense.Le for constraint in cqm.constraints.values()
+    )
     num_ge_inequality_constraints = sum(
-        constraint.sense is sym.Sense.Ge for constraint in
-        cqm.constraints.values())
+        constraint.sense is sym.Sense.Ge for constraint in cqm.constraints.values()
+    )
     num_equality_constraints = sum(
-        constraint.sense is sym.Sense.Eq for constraint in
-        cqm.constraints.values())
+        constraint.sense is sym.Sense.Eq for constraint in cqm.constraints.values()
+    )
 
-    assert (num_binaries + num_integers == len(cqm.variables))
+    assert num_binaries + num_integers == len(cqm.variables)
 
-    assert (num_quadratic_constraints + num_linear_constraints ==
-            len(cqm.constraints))
+    assert num_quadratic_constraints + num_linear_constraints == len(cqm.constraints)
 
     print(" \n" + "=" * 25 + "MODEL INFORMATION" + "=" * 25)
-    print(
-        ' ' * 10 + 'Variables' + " " * 10 + 'Constraints' + " " * 15 +
-        'Sensitivity')
-    print('-' * 20 + " " + '-' * 28 + ' ' + '-' * 18)
+    print(" " * 10 + "Variables" + " " * 10 + "Constraints" + " " * 15 + "Sensitivity")
+    print("-" * 20 + " " + "-" * 28 + " " + "-" * 18)
 
-    print(tabulate([["Binary", "Integer", "Quad", "Linear", "One-hot", "EQ  ",
-                     "LT", "GT"],
-                    [num_binaries, num_integers, num_quadratic_constraints,
-                     num_linear_constraints, num_discretes,
-                     num_equality_constraints,
-                     num_le_inequality_constraints,
-                     num_ge_inequality_constraints]],
-                   headers="firstrow"))
+    print(
+        tabulate(
+            [
+                ["Binary", "Integer", "Quad", "Linear", "One-hot", "EQ  ", "LT", "GT"],
+                [
+                    num_binaries,
+                    num_integers,
+                    num_quadratic_constraints,
+                    num_linear_constraints,
+                    num_discretes,
+                    num_equality_constraints,
+                    num_le_inequality_constraints,
+                    num_ge_inequality_constraints,
+                ],
+            ],
+            headers="firstrow",
+        )
+    )
 
 
 def read_instance(instance_path: str) -> dict:
@@ -75,18 +83,19 @@ def read_instance(instance_path: str) -> dict:
                 continue
             else:
                 job_task = list(map(int, line.split()))
-                job_dict[i - 5] = [x for x in
-                                   zip(job_task[1::2],  # machines
-                                       job_task[2::2]  # processing duration
-                                       )]
-        assert (len(job_dict) == num_jobs)
-        assert (len(job_dict[0]) == num_machines)
+                job_dict[i - 5] = [
+                    x
+                    for x in zip(job_task[1::2], job_task[2::2])  # machines  # processing duration
+                ]
+        assert len(job_dict) == num_jobs
+        assert len(job_dict[0]) == num_machines
 
         return job_dict
 
 
-def write_solution_to_file(model_data, solution: dict, completion: int,
-                           solution_file_path: str) -> None:
+def write_solution_to_file(
+    model_data, solution: dict, completion: int, solution_file_path: str
+) -> None:
     """Write solution to a file.
 
     Args:
@@ -100,11 +109,11 @@ def write_solution_to_file(model_data, solution: dict, completion: int,
 
     main_header = " " * 10
     for i in model_data.resources:
-        main_header += " " * 8 + f'machine {i}' + " " * 7
+        main_header += " " * 8 + f"machine {i}" + " " * 7
 
-    header = ['job id']
+    header = ["job id"]
     for i in model_data.resources:
-        header.extend(['task', 'start', 'dur'])
+        header.extend(["task", "start", "dur"])
 
     job_sol = {}
     for j in model_data.jobs:
@@ -112,20 +121,18 @@ def write_solution_to_file(model_data, solution: dict, completion: int,
         for i in model_data.resources:
             job_sol[j].extend(list(solution[j, i]))
 
-    with open(solution_file_path, 'w') as f:
-        f.write('#Number of jobs: ' + str(model_data.get_job_count()) + '\n')
-        f.write('#Number of machines: ' + str(model_data.get_resource_count()) + '\n')
-        f.write('#Completion time: ' + str(completion) + '\n\n')
+    with open(solution_file_path, "w") as f:
+        f.write("#Number of jobs: " + str(model_data.get_job_count()) + "\n")
+        f.write("#Number of machines: " + str(model_data.get_resource_count()) + "\n")
+        f.write("#Completion time: " + str(completion) + "\n\n")
 
         f.write(main_header)
         f.write("\n")
-        f.write(tabulate([header, *[v for l, v in job_sol.items()]],
-                         headers="firstrow"))
+        f.write(tabulate([header, *[v for l, v in job_sol.items()]], headers="firstrow"))
 
     f.close()
 
-    print(f'\nSaved schedule to '
-          f'{os.path.join(os.getcwd(), solution_file_path)}')
+    print(f"\nSaved schedule to " f"{os.path.join(os.getcwd(), solution_file_path)}")
 
 
 def read_taillard_instance(instance_path: str) -> dict:
@@ -142,29 +149,29 @@ def read_taillard_instance(instance_path: str) -> dict:
     job_dict = defaultdict(list)
 
     with open(instance_path) as f:
-        #ignore the first line
+        # ignore the first line
         f.readline()
-        #the second line contains Nb of jobs, Nb of Machines as first two values
+        # the second line contains Nb of jobs, Nb of Machines as first two values
         line = f.readline()
         num_jobs = int(line.split()[0])
         num_machines = int(line.split()[1])
 
-        #ignore the next line
+        # ignore the next line
         f.readline()
 
-        #the next lines contain the processing times for each job for each resource; read this in as
-        #as matrix until "Machine" is encountered
+        # the next lines contain the processing times for each job for each resource; read this in as
+        # as matrix until "Machine" is encountered
         processing_times = []
         line = f.readline()
         while "Machine" not in line:
             processing_times.append(list(map(int, line.split())))
             line = f.readline()
 
-        #the next lines contain the machine order for each job; read this in as
-        #as matrix until a blank line is encountered
+        # the next lines contain the machine order for each job; read this in as
+        # as matrix until a blank line is encountered
         machine_order = []
         line = f.readline()
-        while line != "\n" and line != '' and line is not None:
+        while line != "\n" and line != "" and line is not None:
             machine_order.append(list(map(int, line.split())))
             line = f.readline()
 
@@ -172,7 +179,7 @@ def read_taillard_instance(instance_path: str) -> dict:
             for machine in range(num_machines):
                 job_dict[job].append((machine_order[job][machine], processing_times[job][machine]))
 
-        assert (len(job_dict) == num_jobs)
-        assert (len(job_dict[0]) == num_machines)
+        assert len(job_dict) == num_jobs
+        assert len(job_dict[0]) == num_machines
 
         return job_dict

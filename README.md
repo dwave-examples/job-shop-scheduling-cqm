@@ -35,7 +35,7 @@ This will call the job shop scheduling algorithm for the input instance file. Co
 
 There are several instances pre-populated under `input` folder. Some of the instances were randomly generated using `utils/jss_generator.py` as discussed under the [Problem generator](#Generating-Problem-Instances) section.
 
-Other instances were pulled from [E. Taillard's list] of benchmarking instances. If the string "taillard" is contained in the filename, the model will expect the input file to match the format used by Taillard. Otherwse, the following format is expected:
+Other instances were pulled from [E. Taillard's list] of benchmarking instances. If the string "taillard" is contained in the filename, the model will expect the input file to match the format used by Taillard. Otherwise, the following format is expected:
 
 ```
 #Num of jobs: 5 
