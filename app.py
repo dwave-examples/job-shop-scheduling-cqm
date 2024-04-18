@@ -186,136 +186,124 @@ def get_empty_figure(message: str) -> go.Figure:
 
 
 @app.callback(
-    Output("optimized_gantt_chart", "figure", allow_duplicate=True),
-    Output("mip_gantt_chart", "figure", allow_duplicate=True),
-    Output("dwave_summary_table", "figure", allow_duplicate=True),
-    Output("mip_summary_table", "figure", allow_duplicate=True),
-    Output("dwave_summary_table", "style", allow_duplicate=True),
-    Output("mip_summary_table", "style", allow_duplicate=True),
-    [Input("run-button", "n_clicks")],
-    prevent_initial_call=False,
-)
-def load_initial_figures(
-    n_clicks: int,
-) -> tuple[go.Figure, go.Figure, go.Figure, go.Figure, dict, dict]:
-    """Loads the initial figures for the Gantt charts.
-
-    Args:
-        n_clicks (int): The number of times the run button has been
-        clicked.
-
-    Returns:
-        go.Figure: Gantt chart for the D-Wave hybrid solver
-        go.Figure: Gantt chart for the Classical solver
-        go.Figure: Results table for the D-Wave hybrid solver
-        go.Figure: Results table for the Classical solver
-        dict: Style for the D-Wave summary table
-        dict: Style for the Classical summary table
-    """
-    if n_clicks == 0:
-        empty_figure = get_empty_figure("Run optimization to see results")
-        empty_table = generate_output_table(0, 0, 0)
-        return (
-            empty_figure,
-            empty_figure,
-            empty_table,
-            empty_table,
-            {"visibility": "hidden"},
-            {"visibility": "hidden"},
-        )
-    else:
-        raise PreventUpdate
-
-
-@app.callback(
-    Output("dwave_tab", "className", allow_duplicate=True),
-    Output("mip_tab", "className", allow_duplicate=True),
-    Output("optimized_gantt_chart", "figure", allow_duplicate=True),
-    Output("mip_gantt_chart", "figure", allow_duplicate=True),
-    Output("dwave_summary_table", "style", allow_duplicate=True),
-    Output("mip_summary_table", "style", allow_duplicate=True),
-    [Input("run-button", "n_clicks"), Input("cancel-button", "n_clicks")],
+    Output("dwave-tab", "label", allow_duplicate=True),
+    Output("mip-tab", "label", allow_duplicate=True),
+    Output("dwave-tab", "disabled", allow_duplicate=True),
+    Output("mip-tab", "disabled", allow_duplicate=True),
+    Output("run-button", "className", allow_duplicate=True),
+    Output("cancel-button", "className", allow_duplicate=True),
+    Output("running-dwave", "data", allow_duplicate=True),
+    Output("running-classical", "data", allow_duplicate=True),
+    Output("tabs", "value"),
+    [
+        Input("run-button", "n_clicks"),
+        Input("cancel-button", "n_clicks"),
+        State("solver-select", "value"),
+    ],
 )
 def update_tab_loading_state(
-    run_click: int, cancel_click: int
-) -> tuple[str, str, go.Figure, go.Figure, dict, dict]:
+    run_click: int, cancel_click: int, solvers: list[str]
+) -> tuple[str, str, bool, bool, str, str, bool, bool, str]:
     """Updates the tab loading state after the run button
     or cancel button has been clicked.
 
     Args:
-        run_click (int): The number of times the run button has been
-            clicked.
-        cancel_click (int): The number of times the cancel button has
-            been clicked.
+        run_click (int): The number of times the run button has been clicked.
+        cancel_click (int): The number of times the cancel button has been clicked.
+        solvers (list[str]): The list of selected solvers.
 
     Returns:
-        str: Class name for the D-Wave tab
-        str: Class name for the Classical tab
-        go.Figure: Figure for the D-Wave tab
-        go.Figure: Figure for the Classical tab
-        dict: Style for the D-Wave summary table
-        dict: Style for the Classical summary table
+        str: The label for the D-Wave tab.
+        str: The label for the Classical tab.
+        bool: True if D-Wave tab should be disabled, False otherwise.
+        bool: True if Classical tab should be disabled, False otherwise.
+        str: Run button class.
+        str: Cancel button class.
+        bool: Whether Hybrid is running.
+        bool: Whether MIP is running.
+        str: The value of the tab that should be active.
     """
-    if ctx.triggered_id == "run-button":
-        if run_click == 0:
-            empty_figure = get_empty_figure("Run optimization to see results")
-            return (
-                "tab",
-                "tab",
-                empty_figure,
-                empty_figure,
-                {"visibility": "hidden"},
-                {"visibility": "hidden"},
-            )
-        else:
-            empty_figure = get_empty_figure("Running...")
-            return (
-                "tab-loading",
-                "tab-loading",
-                empty_figure,
-                empty_figure,
-                {"visibility": "hidden"},
-                {"visibility": "hidden"},
-            )
-    elif ctx.triggered_id == "cancel-button":
-        if cancel_click > 0:
-            empty_figure = get_empty_figure(
-                "Last run cancelled prior to completion. Re-run to see results"
-            )
-            return (
-                "tab",
-                "tab",
-                empty_figure,
-                empty_figure,
-                {"visibility": "hidden"},
-                {"visibility": "hidden"},
-            )
+    run_hybrid = True if "Hybrid" in solvers else False
+    run_mip = True if "MIP" in solvers else False
+
+    if ctx.triggered_id == "run-button" and run_click > 0:
+        return (
+            "Loading..." if run_hybrid else "D-Wave Results",
+            "Loading..." if run_mip else "Classical Results",
+            True,
+            True,
+            "display-none",
+            "",
+            run_hybrid,
+            run_mip,
+            "input-tab"
+        )
+    elif ctx.triggered_id == "cancel-button" and cancel_click > 0:
+        return (
+            "D-Wave Results",
+            "Classical Results",
+            True,
+            True,
+            "",
+            "display-none",
+            False,
+            False,
+            dash.no_update
+        )
     raise PreventUpdate
 
 
 @app.callback(
-    Output("optimized_gantt_chart", "figure"),
-    Output("dwave_summary_table", "figure"),
-    Output("dwave_tab", "className"),
-    Output("dwave_summary_table", "style"),
+    Output("run-button", "className"),
+    Output("cancel-button", "className"),
+    background=True,
+    inputs=[
+        Input("running-dwave", "data"),
+        Input("running-classical", "data"),
+    ],
+    prevent_initial_call=True,
+)
+def update_button_visibility(
+    running_dwave: bool, running_classical: bool
+) -> tuple[str, str]:
+    """Updates the visibility of the run and cancel buttons
+
+    Args:
+        running_dwave (bool): Whether the D-Wave solver is running.
+        running_classical (bool): Whether the Classical solver is running.
+
+    Returns:
+        str: Run button class.
+        str: Cancel button class.
+    """
+    if not running_classical and not running_dwave:
+        return "", "display-none"
+    else:
+        return "display-none", ""
+
+
+
+@app.callback(
+    Output("optimized-gantt-chart", "figure"),
+    Output("dwave-summary-table", "figure"),
+    Output("dwave-tab", "className"),
+    Output("dwave-tab", "label"),
+    Output("dwave-tab", "disabled"),
+    Output("running-dwave", "data"),
     background=True,
     inputs=[
         Input("run-button", "n_clicks"),
         State("model-select", "value"),
         State("solver-select", "value"),
         State("scenario-select", "value"),
-        State("solver_time_limit", "value"),
-    ],
-    running=[
-        (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
-        (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+        State("solver-time-limit", "value"),
     ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def run_optimization_cqm(
     run_click: int, model: str, solver: str, scenario: str, time_limit: int
-) -> tuple[go.Figure, go.Figure, str, dict]:
+) -> tuple[go.Figure, go.Figure, str, str, bool, bool]:
     """Runs optimization using the D-Wave hybrid solver.
 
     Args:
@@ -327,15 +315,14 @@ def run_optimization_cqm(
         time_limit (int): The time limit for the optimization.
 
     Returns:
-        go.Figure: Gantt chart for the D-Wave hybrid solver
-        go.Figure: Results table for the D-Wave hybrid solver
-        str: Class name for the D-Wave tab
-        dict: Style for the D-Wave summary table
+        go.Figure: Gantt chart for the D-Wave hybrid solver.
+        go.Figure: Results table for the D-Wave hybrid solver.
+        str: Class name for the D-Wave tab.
+        str: The label for the D-Wave tab.
+        bool: True if D-Wave tab should be disabled, False otherwise.
+        bool: Whether D-Wave solver is running.
     """
-    if run_click == 0 or ctx.triggered_id != "run-button":
-        empty_figure = get_empty_figure("Run optimization to see results")
-        return empty_figure, "tab"
-    if ctx.triggered_id == "run-button":
+    if ctx.triggered_id == "run-button" and run_click > 0:
         if "Hybrid" in solver:
             model_data = JobShopData()
             filename = SCENARIOS[scenario]
@@ -351,108 +338,119 @@ def run_optimization_cqm(
             end = time.time()
             fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
             table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
-            return fig, table, "tab-success", {"visibility": "visible"}
-        else:
-            time.sleep(0.1)
-            empty_figure = get_empty_figure(
-                HTML_CONFIGS["solver_messages"]["dwave"]["solver_not_chosen"]
+            return (
+                fig,
+                table,
+                "tab-success",
+                "D-Wave Results",
+                False,
+                False
             )
-            table = generate_output_table(0, 0, 0)
-            return empty_figure, table, "tab-warning", {"visibility": "hidden"}
+        else:
+            return (
+                dash.no_update,
+                dash.no_update,
+                "tab",
+                "D-Wave Results",
+                True,
+                False
+            )
     else:
         raise PreventUpdate
 
 
 @app.callback(
-    Output("mip_gantt_chart", "figure"),
-    Output("mip_summary_table", "figure"),
-    Output("mip_tab", "className"),
-    Output("mip_summary_table", "style"),
+    Output("mip-gantt-chart", "figure"),
+    Output("mip-summary-table", "figure"),
+    Output("mip-tab", "className"),
+    Output("mip-tab", "label"),
+    Output("mip-tab", "disabled"),
+    Output("running-classical", "data"),
     background=True,
     inputs=[
         Input("run-button", "n_clicks"),
-        State("model-select", "value"),
         State("solver-select", "value"),
         State("scenario-select", "value"),
-        State("solver_time_limit", "value"),
-    ],
-    running=[
-        (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
-        (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+        State("solver-time-limit", "value"),
     ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def run_optimization_mip(
-    run_click: int, model: str, solver: str, scenario: str, time_limit: int
-) -> tuple[go.Figure, go.Figure, str, dict]:
+    run_click: int, solver: str, scenario: str, time_limit: int
+) -> tuple[go.Figure, go.Figure, str, str, bool, bool]:
     """Runs optimization using the COIN-OR Branch-and-Cut solver.
 
     Args:
         run_click (int): The number of times the run button has been
             clicked.
-        model (str): The model to use for the optimization.
         solver (str): The solver to use for the optimization.
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
     Returns:
-        go.Figure: Gantt chart for the Classical solver
-        go.Figure: Results table for the Classical solver
-        str: Class name for the Classical tab
-        dict: Style for the Classical summary table
+        go.Figure: Gantt chart for the Classical solver.
+        go.Figure: Results table for the Classical solver.
+        str: Class name for the Classical tab.
+        str: The label for the Classical tab.
+        bool: True if Classical tab should be disabled, False otherwise.
+        str: Run button class.
+        str. Cancel button class.
+        bool: Whether Classical solver is running.
     """
-    if run_click == 0:
-        empty_figure = get_empty_figure("Run optimization to see results")
-        return empty_figure, "tab"
-    if ctx.triggered_id == "run-button":
+    if ctx.triggered_id == "run-button" and run_click > 0:
         if "MIP" in solver:
             model_data = JobShopData()
             filename = SCENARIOS[scenario]
             model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-            use_mip_solver = True
-            allow_quadratic_constraints = model == "QM"
-            if allow_quadratic_constraints:
-                time.sleep(0.1)  # sleep to allow the loading icon to appear first
-                fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["quadratic_error"])
-                class_name = "tab-fail"
-                mip_table = generate_output_table(0, 0, 0)
-                mip_table_style = {"visibility": "hidden"}
-            else:
-                start = time.time()
-                results = run_shop_scheduler(
-                    model_data,
-                    use_mip_solver=use_mip_solver,
-                    allow_quadratic_constraints=allow_quadratic_constraints,
-                    solver_time_limit=time_limit,
+
+            start = time.time()
+            results = run_shop_scheduler(
+                model_data,
+                use_mip_solver=True,
+                allow_quadratic_constraints=False,
+                solver_time_limit=time_limit,
+            )
+            end = time.time()
+            if len(results) == 0:
+                fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["no_solution"])
+                return (
+                    fig,
+                    dash.no_update,
+                    "tab-fail",
+                    "Classical Results",
+                    False,
+                    False
                 )
-                end = time.time()
-                if len(results) == 0:
-                    fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["no_solution"])
-                    mip_table = generate_output_table(0, 0, 0)
-                    class_name = "tab-fail"
-                    mip_table_style = {"visibility": "hidden"}
-                else:
-                    fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-                    class_name = "tab-success"
-                    mip_table = generate_output_table(
-                        results["Finish"].max(), time_limit, int(end - start)
-                    )
-                    mip_table_style = {"visibility": "visible"}
-            return fig, mip_table, class_name, mip_table_style
+            else:
+                fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
+                class_name = "tab-success"
+                mip_table = generate_output_table(
+                    results["Finish"].max(), time_limit, int(end - start)
+                )
+                return (
+                    fig,
+                    mip_table,
+                    class_name,
+                    "Classical Results",
+                    False,
+                    False
+                )
         else:
-            time.sleep(0.1)  # sleep to allow the loading icon to appear first
-            message = HTML_CONFIGS["solver_messages"]["mip"]["solver_not_chosen"]
-            empty_figure = get_empty_figure(message)
-            mip_table = generate_output_table(0, 0, 0)
-            mip_table_style = {"visibility": "hidden"}
-            return empty_figure, mip_table, "tab-warning", mip_table_style
+            return (
+                dash.no_update,
+                dash.no_update,
+                "tab",
+                "Classical Results",
+                True,
+                False
+            )
     else:
         raise PreventUpdate
 
 
 @app.callback(
-    Output("unscheduled_gantt_chart", "figure"),
+    Output("unscheduled-gantt-chart", "figure"),
     [
         Input("scenario-select", "value"),
     ],

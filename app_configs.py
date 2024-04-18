@@ -31,11 +31,11 @@ HTML_CONFIGS = {
             "header": "Unscheduled Jobs and Resources",
         },
         "classical": {
-            "name": "Classical",
+            "name": "Classical Results",
             "header": "COIN-OR Branch-and-Cut Solver",
         },
         "dwave": {
-            "name": "D-Wave",
+            "name": "D-Wave Results",
             "header": "D-Wave Hybrid Solver",
         },
     },

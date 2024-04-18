@@ -54,6 +54,10 @@ body {
     margin: 0;
 }
 
+.display-none {
+    display: none;
+}
+
 .banner {
     height: 5.5rem;
     padding: 0 2rem;
@@ -317,37 +321,6 @@ button:not(#left-column-collapse) {
     border-top: 3px solid var(--orange) !important;
 }
 
-#solver_time_limit {
+#solver-time-limit {
     margin-bottom: 20px;
-}
-
-.tab-loading {
-    overflow: hidden;
-    position: relative;
-}
-
-.tab-loading:before {
-    content: "";
-    position: absolute;
-    bottom: calc(-100% + 5px);
-    left: calc(-100% + 5px);
-    width: 100%;
-    height: 100%;
-    background: var(--teal-dark);
-    animation: rotate 4s linear infinite;
-}
-
-@keyframes rotate {
-    20% {
-        transform: translate(0px, calc(-200% + 10px))
-    }
-    50% {
-        transform: translate(calc(200% - 10px), calc(-200% + 10px))
-    }
-    70% {
-        transform: translate(calc(200% - 10px), 0px)
-    }
-    100% {
-        transform: translate(0px, 0px)
-    }
 }
