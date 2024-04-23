@@ -30,6 +30,10 @@ Apache License, Version 2.0
 
 */
 
+
+/* theme.css is automatically generated, see app.py for more details */
+@import url("theme.css");
+
 :root {
     --blue-bright: #03B8FF;
     --blue-light: #2A7DE1;
@@ -45,6 +49,9 @@ Apache License, Version 2.0
     --grey: #AAAAAA;
     --grey-medium: #777777;
     --grey-dark: #222222;
+    --banner-height: 5.5rem;
+    --left-col-width: 34rem;
+    --problem-details-height: 18rem;
 }
 
 body {
@@ -58,20 +65,20 @@ body {
     display: none;
 }
 
-.banner {
-    height: 5.5rem;
-    padding: 0 2rem;
-    background-color: var(--blue-dark);
+#banner {
+    flex: 0 0 var(--banner-height);
+    background-color: var(--theme);
 
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-.banner img {
+#banner img {
     position: relative;
     height: 3rem;
     width: auto;
+    margin-left: 2rem;
 }
 
 
@@ -80,7 +87,7 @@ h1, h2, h3, h4, h5, h6, td, th, span, a, p, label {
 }
 
 h1, h2, h3, h4, h5, h6 {
-    color: var(--blue-dark);
+    color: var(--theme);
     font-weight: 400;
 }
 
@@ -90,7 +97,7 @@ h1 {
 }
 
 h3 {
-    font-size: 2.5rem;
+    font-size: 2.4rem;
     margin: 2.5rem 0 1rem;
 }
 
@@ -103,6 +110,11 @@ h4 {
     font-size: 2rem;
     margin-top: 2rem;
     font-weight: 500;
+}
+
+h5 {
+    font-size: 1.8rem;
+    font-weight: 600;
 }
 
 label {
@@ -126,6 +138,14 @@ input[type="checkbox"] {
 
 #app-container {
     min-width: 1000px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#columns {
+    display: flex;
+    flex: 1;
 }
 
 #left-column {
@@ -134,24 +154,17 @@ input[type="checkbox"] {
 
 #left-column > div > div {
     padding: 0 2rem;
-    width: 30rem;
+    width: calc(var(--left-col-width) - 4rem);
 }
 
 #left-column > div:first-child {
-    width: 34rem;
+    width: var(--left-col-width);
     transition: width 0.6s ease-in-out;
     overflow: hidden;
 }
 
 #left-column.collapsed > div:first-child {
     width: 0;
-}
-
-#columns {
-    display: flex;
-
-    /* Height of screen minus height of banner */
-    min-height: calc(100vh - 5.5rem);
 }
 
 #right-column {
@@ -210,7 +223,7 @@ input[type="checkbox"] {
 }
 
 .tab-container {
-    border-bottom: 3px solid var(--blue-light);
+    border-bottom: 3px solid var(--theme-secondary);
     flex-direction: row !important;
 }
 
@@ -222,7 +235,7 @@ input[type="checkbox"] {
 }
 
 div.tab.tab--selected {
-    border: 3px solid var(--blue-light) !important;
+    border: 3px solid var(--theme-secondary) !important;
     border-bottom: none !important;
     cursor: default !important;
     box-shadow: 0 6px 0 -3px white;
@@ -250,14 +263,15 @@ div.tab.tab--disabled {
     padding: 0 1.5rem 3rem;
 }
 
-button:not(#left-column-collapse) {
+#run-button,
+#cancel-button {
     width: 100%;
     font-size: 1.4rem;
     line-height: 1.4rem;
     padding: 1.8rem;
     height: auto;
     color: white;
-    transition: background-color 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
     margin-bottom: 4rem;
     border: none;
 }
@@ -293,12 +307,21 @@ button:not(#left-column-collapse) {
     transform: rotate(315deg) skew(160deg, 160deg);
 }
 
+.VirtualizedSelectFocusedOption {
+    background-color: var(--grey-lighter);
+}
+
+.is-focused:not(.is-open)>.Select-control {
+    border-color: var(--theme-secondary);
+    box-shadow: none;
+}
+
 #run-button {
-    background-color: var(--blue-light);
+    background-color: var(--theme);
 }
 
 #run-button:hover {
-    background-color: var(--blue-dark);
+    filter: brightness(80%);
 }
 
 #cancel-button {

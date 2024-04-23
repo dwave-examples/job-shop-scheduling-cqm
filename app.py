@@ -47,7 +47,7 @@ from dash_html import set_html
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
-from app_configs import HTML_CONFIGS, RESOURCE_NAMES, SCENARIOS
+from app_configs import APP_TITLE, RESOURCE_NAMES, SCENARIOS, DEBUG, THEME_COLOR, THEME_COLOR_SECONDARY
 from src.job_shop_scheduler import run_shop_scheduler
 from src.model_data import JobShopData
 from generate_charts import generate_gantt_chart, generate_output_table, get_empty_figure
@@ -58,13 +58,24 @@ app = dash.Dash(
     prevent_initial_callbacks="initial_duplicate",
     background_callback_manager=background_callback_manager,
 )
-app.title = HTML_CONFIGS["title"]
+app.title = APP_TITLE
 
 server = app.server
 app.config.suppress_callback_exceptions = True
 
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("input").resolve()
+
+# Generates css file and variable using THEME_COLOR and THEME_COLOR_SECONDARY settings
+css = f"""/* Generated theme settings css file, see app.py */
+:root {{
+    --theme: {THEME_COLOR};
+    --theme-secondary: {THEME_COLOR_SECONDARY};
+}}
+"""
+with open("assets/theme.css", "w") as f:
+    f.write(css)
+
 
 class Model(Enum):
     MIP = 0
@@ -93,9 +104,7 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
     Returns:
         str: The new class name of the left column.
     """
-    if class_name:
-        return ""
-    return "collapsed"
+    return "" if class_name else "collapsed"
 
 
 @app.callback(
@@ -171,10 +180,11 @@ def update_tab_loading_state(
         bool: Whether MIP is running.
         str: The value of the tab that should be active.
     """
-    run_hybrid = SamplerType.HYBRID.value in solvers
-    run_mip = SamplerType.MIP.value in solvers
 
     if ctx.triggered_id == "run-button" and run_click > 0:
+        run_hybrid = SamplerType.HYBRID.value in solvers
+        run_mip = SamplerType.MIP.value in solvers
+
         return (
             "Loading..." if run_hybrid else "D-Wave Results",
             "Loading..." if run_mip else "Classical Results",
@@ -186,7 +196,7 @@ def update_tab_loading_state(
             run_mip,
             "input-tab"
         )
-    elif ctx.triggered_id == "cancel-button" and cancel_click > 0:
+    if ctx.triggered_id == "cancel-button" and cancel_click > 0:
         return (
             "D-Wave Results",
             "Classical Results",
@@ -226,8 +236,8 @@ def update_button_visibility(
     """
     if not running_classical and not running_dwave:
         return "", "display-none"
-    else:
-        return "display-none", ""
+
+    return "display-none", ""
 
 
 
@@ -390,7 +400,7 @@ def run_optimization_mip(
             False
         )
     else:
-        fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["no_solution"])
+        fig = get_empty_figure("No solution found for MIP solver")
         table = generate_output_table(0, 0, 0)
         return (
             fig,
@@ -435,4 +445,4 @@ app.clientside_callback(
 
 # Run the server
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=DEBUG)
