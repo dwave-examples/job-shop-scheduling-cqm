@@ -53,14 +53,5 @@ SCENARIOS = {
     "30x30": "instance30_30.txt",
 }
 
-# The list of models that the user can choose from in the app
-MODEL_OPTIONS = {
-    "Mixed Integer Model": "MIP",
-    "Mixed Integer Quadratic Model": "QM",
-}
-
-# The list of solvers that the user can choose from in the app
-SOLVER_OPTIONS = {"D-Wave Hybrid Solver": "Hybrid", "COIN-OR Branch-and-Cut Solver (CBC)": "MIP"}
-
 # The list of resources that the user can choose from in the app
 RESOURCE_NAMES = json.load(open("./src/data/resource_names.json", "r"))["industrial"]

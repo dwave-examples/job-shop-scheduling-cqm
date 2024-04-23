@@ -32,6 +32,7 @@ Apache License, Version 2.0
 
 import pathlib
 import time
+from typing import Union
 
 import dash
 import diskcache
@@ -41,6 +42,8 @@ import plotly.graph_objs as go
 from dash import DiskcacheManager, ctx
 from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
+
+from enum import Enum
 
 from dash_html import set_html
 
@@ -66,6 +69,14 @@ BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("input").resolve()
 
 model_data = JobShopData()
+
+class Model(Enum):
+    MIP = 0
+    QM = 1
+
+class SamplerType(Enum):
+    HYBRID = 0
+    MIP = 1
 
 
 @app.callback(
@@ -102,13 +113,15 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
     ],
     prevent_initial_call=True,
 )
-def update_solver_options(model_value: str, selected_solvers: list[str], last_selected_solvers: list[str]) -> list[str]:
+def update_solver_options(
+    model: int, selected_solvers: list[int], last_selected_solvers: list[int]
+) -> tuple[str, list[int], list[int]]:
     """Hides and shows classical solver option using 'hide-classic' class
 
     Args:
-        model_value (str): Currently selected model from model-select dropdown.
-        selected_solvers (list[str]): Currently selected solvers.
-        last_selected_solvers (list[str]): Previously selected solvers.
+        model_value (int): Currently selected model from model-select dropdown.
+        selected_solvers (list[int]): Currently selected solvers.
+        last_selected_solvers (list[int]): Previously selected solvers.
 
     Returns:
         str: The new class name of the solver-select checklist.
@@ -116,8 +129,11 @@ def update_solver_options(model_value: str, selected_solvers: list[str], last_se
         list: Updates last_selected_solvers with the list of solvers that were selected before updating.
     """
 
-    if model_value == "QM":
-        return "hide-classic", ["Hybrid"], selected_solvers
+    if isinstance(model, int):
+        model = Model(model)
+
+    if model is Model.QM:
+        return "hide-classic", [SamplerType.HYBRID.value], selected_solvers
     return "", last_selected_solvers, dash.no_update
 
 
@@ -223,8 +239,8 @@ def update_tab_loading_state(
         bool: Whether MIP is running.
         str: The value of the tab that should be active.
     """
-    run_hybrid = True if "Hybrid" in solvers else False
-    run_mip = True if "MIP" in solvers else False
+    run_hybrid = SamplerType.HYBRID.value in solvers
+    run_mip = SamplerType.MIP.value in solvers
 
     if ctx.triggered_id == "run-button" and run_click > 0:
         return (
@@ -302,15 +318,15 @@ def update_button_visibility(
     prevent_initial_call=True,
 )
 def run_optimization_cqm(
-    run_click: int, model: str, solver: str, scenario: str, time_limit: int
+    run_click: int, model: int, solvers: list[int], scenario: str, time_limit: int
 ) -> tuple[go.Figure, go.Figure, str, str, bool, bool]:
     """Runs optimization using the D-Wave hybrid solver.
 
     Args:
         run_click (int): The number of times the run button has been
             clicked.
-        model (str): The model to use for the optimization.
-        solver (str): The solver to use for the optimization.
+        model (int): The model to use for the optimization.
+        solvers (list[int]): The solvers that have been selected.
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
@@ -322,41 +338,45 @@ def run_optimization_cqm(
         bool: True if D-Wave tab should be disabled, False otherwise.
         bool: Whether D-Wave solver is running.
     """
-    if ctx.triggered_id == "run-button" and run_click > 0:
-        if "Hybrid" in solver:
-            model_data = JobShopData()
-            filename = SCENARIOS[scenario]
-            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-            allow_quadratic_constraints = model == "QM"
-            start = time.time()
-            results = run_shop_scheduler(
-                model_data,
-                use_mip_solver=False,
-                allow_quadratic_constraints=allow_quadratic_constraints,
-                solver_time_limit=time_limit,
-            )
-            end = time.time()
-            fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-            table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
-            return (
-                fig,
-                table,
-                "tab-success",
-                "D-Wave Results",
-                False,
-                False
-            )
-        else:
-            return (
-                dash.no_update,
-                dash.no_update,
-                "tab",
-                "D-Wave Results",
-                True,
-                False
-            )
-    else:
+    if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
+
+    if not SamplerType.HYBRID.value in solvers:
+        return (
+            dash.no_update,
+            dash.no_update,
+            "tab",
+            "D-Wave Results",
+            True,
+            False
+        )
+
+    if isinstance(model, int):
+        model = Model(model)
+
+    model_data = JobShopData()
+    filename = SCENARIOS[scenario]
+    model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
+    allow_quadratic_constraints = model is Model.QM
+    start = time.time()
+    results = run_shop_scheduler(
+        model_data,
+        use_mip_solver=False,
+        allow_quadratic_constraints=allow_quadratic_constraints,
+        solver_time_limit=time_limit,
+    )
+    end = time.time()
+    fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
+    table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
+
+    return (
+        fig,
+        table,
+        "tab-success",
+        "D-Wave Results",
+        False,
+        False
+    )
 
 
 @app.callback(
@@ -377,14 +397,14 @@ def run_optimization_cqm(
     prevent_initial_call=True,
 )
 def run_optimization_mip(
-    run_click: int, solver: str, scenario: str, time_limit: int
+    run_click: int, solvers: list[int], scenario: str, time_limit: int
 ) -> tuple[go.Figure, go.Figure, str, str, bool, bool]:
     """Runs optimization using the COIN-OR Branch-and-Cut solver.
 
     Args:
         run_click (int): The number of times the run button has been
             clicked.
-        solver (str): The solver to use for the optimization.
+        solvers (list[int]): The solvers that have been selected.
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
@@ -398,55 +418,56 @@ def run_optimization_mip(
         str. Cancel button class.
         bool: Whether Classical solver is running.
     """
-    if ctx.triggered_id == "run-button" and run_click > 0:
-        if "MIP" in solver:
-            model_data = JobShopData()
-            filename = SCENARIOS[scenario]
-            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-
-            start = time.time()
-            results = run_shop_scheduler(
-                model_data,
-                use_mip_solver=True,
-                allow_quadratic_constraints=False,
-                solver_time_limit=time_limit,
-            )
-            end = time.time()
-            if len(results) == 0:
-                fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["no_solution"])
-                return (
-                    fig,
-                    dash.no_update,
-                    "tab-fail",
-                    "Classical Results",
-                    False,
-                    False
-                )
-            else:
-                fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-                class_name = "tab-success"
-                mip_table = generate_output_table(
-                    results["Finish"].max(), time_limit, int(end - start)
-                )
-                return (
-                    fig,
-                    mip_table,
-                    class_name,
-                    "Classical Results",
-                    False,
-                    False
-                )
-        else:
-            return (
-                dash.no_update,
-                dash.no_update,
-                "tab",
-                "Classical Results",
-                True,
-                False
-            )
-    else:
+    if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
+
+    if not SamplerType.MIP.value in solvers:
+        return (
+            dash.no_update,
+            dash.no_update,
+            "tab",
+            "Classical Results",
+            True,
+            False
+        )
+
+    model_data = JobShopData()
+    filename = SCENARIOS[scenario]
+    model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
+
+    start = time.time()
+    results = run_shop_scheduler(
+        model_data,
+        use_mip_solver=True,
+        allow_quadratic_constraints=False,
+        solver_time_limit=time_limit,
+    )
+    end = time.time()
+    if len(results):
+        fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
+        class_name = "tab-success"
+        mip_table = generate_output_table(
+            results["Finish"].max(), time_limit, int(end - start)
+        )
+        return (
+            fig,
+            mip_table,
+            class_name,
+            "Classical Results",
+            False,
+            False
+        )
+    else:
+        fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["no_solution"])
+        table = generate_output_table(0, 0, 0)
+        return (
+            fig,
+            table,
+            "tab-fail",
+            "Classical Results",
+            False,
+            False
+        )
 
 
 @app.callback(

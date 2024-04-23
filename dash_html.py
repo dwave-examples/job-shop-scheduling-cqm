@@ -35,7 +35,10 @@ from __future__ import annotations
 import dash
 from dash import dcc, html
 
-from app_configs import HTML_CONFIGS, MODEL_OPTIONS, SCENARIOS, SOLVER_OPTIONS
+from app_configs import HTML_CONFIGS, SCENARIOS
+
+MODEL_OPTIONS = ["Mixed Integer Model", "Mixed Integer Quadratic Model"]
+SOLVER_OPTIONS = ["D-Wave Hybrid Solver", "Classical Solver (COIN-OR Branch-and-Cut)"]
 
 
 def description_card():
@@ -58,15 +61,10 @@ def generate_control_card() -> html.Div:
         html.Div: A Div containing the dropdowns for selecting the scenario,
         model, and solver.
     """
-    scenario_options = []
-    for scenario in SCENARIOS:
-        scenario_options.append({"label": scenario, "value": scenario})
-    model_options = []
-    for model_option, model_value in MODEL_OPTIONS.items():
-        model_options.append({"label": model_option, "value": model_value})
-    solver_options = []
-    for solver_option, solver_value in SOLVER_OPTIONS.items():
-        solver_options.append({"label": solver_option, "value": solver_value})
+
+    scenario_options = [{"label": scenario, "value": scenario} for scenario in SCENARIOS]
+    model_options = [{"label": model_option, "value": i} for i, model_option in enumerate(MODEL_OPTIONS)]
+    solver_options = [{"label": solver_value, "value": i} for i, solver_value in enumerate(SOLVER_OPTIONS)]
 
     return html.Div(
         id="control-card",
