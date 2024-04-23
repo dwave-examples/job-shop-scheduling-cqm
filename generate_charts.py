@@ -44,7 +44,6 @@ background_callback_manager = DiskcacheManager(cache)
 from app_configs import RESOURCE_NAMES, SCENARIOS
 from src.model_data import JobShopData
 
-
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("input").resolve()
 

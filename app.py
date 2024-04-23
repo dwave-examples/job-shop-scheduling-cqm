@@ -32,6 +32,7 @@ Apache License, Version 2.0
 
 import pathlib
 import time
+from enum import Enum
 
 import dash
 import diskcache
@@ -40,17 +41,22 @@ from dash import DiskcacheManager, ctx
 from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from enum import Enum
-
 from dash_html import set_html
 
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
-from app_configs import APP_TITLE, RESOURCE_NAMES, SCENARIOS, DEBUG, THEME_COLOR, THEME_COLOR_SECONDARY
+from app_configs import (
+    APP_TITLE,
+    DEBUG,
+    RESOURCE_NAMES,
+    SCENARIOS,
+    THEME_COLOR,
+    THEME_COLOR_SECONDARY,
+)
+from generate_charts import generate_gantt_chart, generate_output_table, get_empty_figure
 from src.job_shop_scheduler import run_shop_scheduler
 from src.model_data import JobShopData
-from generate_charts import generate_gantt_chart, generate_output_table, get_empty_figure
 
 app = dash.Dash(
     __name__,
@@ -80,6 +86,7 @@ with open("assets/theme.css", "w") as f:
 class Model(Enum):
     MIP = 0
     QM = 1
+
 
 class SamplerType(Enum):
     HYBRID = 0
@@ -200,7 +207,7 @@ def update_tab_loading_state(
             "",
             run_hybrid,
             run_mip,
-            "input-tab"
+            "input-tab",
         )
     if ctx.triggered_id == "cancel-button" and cancel_click > 0:
         return (
@@ -214,7 +221,7 @@ def update_tab_loading_state(
             "display-none",
             False,
             False,
-            dash.no_update
+            dash.no_update,
         )
     raise PreventUpdate
 
@@ -229,9 +236,7 @@ def update_tab_loading_state(
     ],
     prevent_initial_call=True,
 )
-def update_button_visibility(
-    running_dwave: bool, running_classical: bool
-) -> tuple[str, str]:
+def update_button_visibility(running_dwave: bool, running_classical: bool) -> tuple[str, str]:
     """Updates the visibility of the run and cancel buttons
 
     Args:
@@ -246,7 +251,6 @@ def update_button_visibility(
         return "", "display-none"
 
     return "display-none", ""
-
 
 
 @app.callback(
@@ -292,14 +296,7 @@ def run_optimization_cqm(
         raise PreventUpdate
 
     if not SamplerType.HYBRID.value in solvers:
-        return (
-            dash.no_update,
-            dash.no_update,
-            "tab",
-            "D-Wave Results",
-            True,
-            False
-        )
+        return (dash.no_update, dash.no_update, "tab", "D-Wave Results", True, False)
 
     if isinstance(model, int):
         model = Model(model)
@@ -319,14 +316,7 @@ def run_optimization_cqm(
     fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
     table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
 
-    return (
-        fig,
-        table,
-        "tab-success",
-        "D-Wave Results",
-        False,
-        False
-    )
+    return (fig, table, "tab-success", "D-Wave Results", False, False)
 
 
 @app.callback(
@@ -372,14 +362,7 @@ def run_optimization_mip(
         raise PreventUpdate
 
     if not SamplerType.MIP.value in solvers:
-        return (
-            dash.no_update,
-            dash.no_update,
-            "tab",
-            "Classical Results",
-            True,
-            False
-        )
+        return (dash.no_update, dash.no_update, "tab", "Classical Results", True, False)
 
     model_data = JobShopData()
     filename = SCENARIOS[scenario]
@@ -396,28 +379,12 @@ def run_optimization_mip(
     if len(results):
         fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
         class_name = "tab-success"
-        mip_table = generate_output_table(
-            results["Finish"].max(), time_limit, int(end - start)
-        )
-        return (
-            fig,
-            mip_table,
-            class_name,
-            "Classical Results",
-            False,
-            False
-        )
+        mip_table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
+        return (fig, mip_table, class_name, "Classical Results", False, False)
     else:
         fig = get_empty_figure("No solution found for MIP solver")
         table = generate_output_table(0, 0, 0)
-        return (
-            fig,
-            table,
-            "tab-fail",
-            "Classical Results",
-            False,
-            False
-        )
+        return (fig, table, "tab-fail", "Classical Results", False, False)
 
 
 @app.callback(
