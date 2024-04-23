@@ -147,6 +147,8 @@ def update_solver_options(
     Output("mip-tab", "label", allow_duplicate=True),
     Output("dwave-tab", "disabled", allow_duplicate=True),
     Output("mip-tab", "disabled", allow_duplicate=True),
+    Output("dwave-tab", "className", allow_duplicate=True),
+    Output("mip-tab", "className", allow_duplicate=True),
     Output("run-button", "className", allow_duplicate=True),
     Output("cancel-button", "className", allow_duplicate=True),
     Output("running-dwave", "data", allow_duplicate=True),
@@ -160,7 +162,7 @@ def update_solver_options(
 )
 def update_tab_loading_state(
     run_click: int, cancel_click: int, solvers: list[str]
-) -> tuple[str, str, bool, bool, str, str, bool, bool, str]:
+) -> tuple[str, str, bool, bool, str, str, str, str, bool, bool, str]:
     """Updates the tab loading state after the run button
     or cancel button has been clicked.
 
@@ -174,6 +176,8 @@ def update_tab_loading_state(
         str: The label for the Classical tab.
         bool: True if D-Wave tab should be disabled, False otherwise.
         bool: True if Classical tab should be disabled, False otherwise.
+        str: Class name for the D-Wave tab.
+        str: Class name for the Classical tab.
         str: Run button class.
         str: Cancel button class.
         bool: Whether Hybrid is running.
@@ -190,6 +194,8 @@ def update_tab_loading_state(
             "Loading..." if run_mip else "Classical Results",
             True,
             True,
+            "tab",
+            "tab",
             "display-none",
             "",
             run_hybrid,
@@ -200,8 +206,10 @@ def update_tab_loading_state(
         return (
             "D-Wave Results",
             "Classical Results",
-            True,
-            True,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
             "",
             "display-none",
             False,
