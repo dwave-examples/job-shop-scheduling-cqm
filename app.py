@@ -197,8 +197,8 @@ def update_tab_loading_state(
         run_mip = SamplerType.MIP.value in solvers
 
         return (
-            "Loading..." if run_hybrid else "D-Wave Results",
-            "Loading..." if run_mip else "Classical Results",
+            "Loading..." if run_hybrid else dash.no_update,
+            "Loading..." if run_mip else dash.no_update,
             True,
             True,
             "tab",
@@ -237,7 +237,7 @@ def update_tab_loading_state(
     prevent_initial_call=True,
 )
 def update_button_visibility(running_dwave: bool, running_classical: bool) -> tuple[str, str]:
-    """Updates the visibility of the run and cancel buttons
+    """Updates the visibility of the run and cancel buttons.
 
     Args:
         running_dwave (bool): Whether the D-Wave solver is running.
@@ -277,8 +277,7 @@ def run_optimization_cqm(
     """Runs optimization using the D-Wave hybrid solver.
 
     Args:
-        run_click (int): The number of times the run button has been
-            clicked.
+        run_click (int): The number of times the run button has been clicked.
         model (int): The model to use for the optimization.
         solvers (list[int]): The solvers that have been selected.
         scenario (str): The scenario to use for the optimization.
@@ -295,7 +294,7 @@ def run_optimization_cqm(
     if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
 
-    if not SamplerType.HYBRID.value in solvers:
+    if SamplerType.HYBRID.value not in solvers:
         return (dash.no_update, dash.no_update, "tab", "D-Wave Results", True, False)
 
     if isinstance(model, int):
@@ -361,7 +360,7 @@ def run_optimization_mip(
     if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
 
-    if not SamplerType.MIP.value in solvers:
+    if SamplerType.MIP.value not in solvers:
         return (dash.no_update, dash.no_update, "tab", "Classical Results", True, False)
 
     model_data = JobShopData()
@@ -376,15 +375,14 @@ def run_optimization_mip(
         solver_time_limit=time_limit,
     )
     end = time.time()
-    if len(results):
+    if results.empy():
         fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
         class_name = "tab-success"
         mip_table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
         return (fig, mip_table, class_name, "Classical Results", False, False)
-    else:
-        fig = get_empty_figure("No solution found for MIP solver")
-        table = generate_output_table(0, 0, 0)
-        return (fig, table, "tab-fail", "Classical Results", False, False)
+    fig = get_empty_figure("No solution found for MIP solver")
+    table = generate_output_table(0, 0, 0)
+    return (fig, table, "tab-fail", "Classical Results", False, False)
 
 
 @app.callback(
