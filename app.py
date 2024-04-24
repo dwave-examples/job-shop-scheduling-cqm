@@ -199,8 +199,8 @@ def update_tab_loading_state(
         return (
             "Loading..." if run_hybrid else dash.no_update,
             "Loading..." if run_mip else dash.no_update,
-            True,
-            True,
+            True if run_hybrid else dash.no_update,
+            True if run_mip else dash.no_update,
             "tab",
             "tab",
             "display-none",
@@ -295,7 +295,7 @@ def run_optimization_cqm(
         raise PreventUpdate
 
     if SamplerType.HYBRID.value not in solvers:
-        return (dash.no_update, dash.no_update, "tab", DWAVE_TAB_LABEL, True, False)
+        return (dash.no_update, dash.no_update, "tab", DWAVE_TAB_LABEL, dash.no_update, False)
 
     start = time.perf_counter()
     model = Model(model)
@@ -352,15 +352,13 @@ def run_optimization_mip(
         str: Class name for the Classical tab.
         str: The label for the Classical tab.
         bool: True if Classical tab should be disabled, False otherwise.
-        str: Run button class.
-        str. Cancel button class.
         bool: Whether Classical solver is running.
     """
     if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
 
     if SamplerType.MIP.value not in solvers:
-        return (dash.no_update, dash.no_update, "tab", CLASSICAL_TAB_LABEL, True, False)
+        return (dash.no_update, dash.no_update, "tab", CLASSICAL_TAB_LABEL, dash.no_update, False)
 
     start = time.perf_counter()
     model_data = JobShopData()
@@ -376,8 +374,8 @@ def run_optimization_mip(
     )
 
     if results.empty:
-        fig = get_empty_figure("No solution found for MIP solver")
-        table = generate_output_table(0, 0, 0)
+        fig = get_empty_figure("No solution found for Classical solver")
+        table = generate_output_table(0, time_limit, time.perf_counter() - start)
         return (fig, table, "tab-fail", CLASSICAL_TAB_LABEL, False, False)
 
     fig = generate_gantt_chart(results)
