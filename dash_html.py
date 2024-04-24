@@ -34,7 +34,15 @@ from __future__ import annotations
 
 from dash import dcc, html
 
-from app_configs import DESCRIPTION, MAIN_HEADER, SCENARIOS, SOLVER_TIME, THUMBNAIL
+from app_configs import (
+    CLASSICAL_TAB_LABEL,
+    DESCRIPTION,
+    DWAVE_TAB_LABEL,
+    MAIN_HEADER,
+    SCENARIOS,
+    SOLVER_TIME,
+    THUMBNAIL
+)
 
 MODEL_OPTIONS = ["Mixed Integer Model", "Mixed Integer Quadratic Model"]
 SOLVER_OPTIONS = ["D-Wave Hybrid Solver", "Classical Solver (COIN-OR Branch-and-Cut)"]
@@ -101,7 +109,7 @@ def generate_control_card() -> html.Div:
                 options=solver_options,
                 value=[solver_options[0]["value"]],
             ),
-            html.Label("Solver Time Limit"),
+            html.Label("Solver Time Limit (seconds)"),
             dcc.Input(
                 id="solver-time-limit",
                 type="number",
@@ -197,7 +205,7 @@ def set_html(app):
                                         ],
                                     ),
                                     dcc.Tab(
-                                        label="D-Wave Results",
+                                        label=DWAVE_TAB_LABEL,
                                         value="dwave-tab",
                                         id="dwave-tab",
                                         className="tab",
@@ -223,7 +231,7 @@ def set_html(app):
                                         ],
                                     ),
                                     dcc.Tab(
-                                        label="Classical Results",
+                                        label=CLASSICAL_TAB_LABEL,
                                         id="mip-tab",
                                         className="tab",
                                         value="mip-tab",

@@ -48,13 +48,15 @@ background_callback_manager = DiskcacheManager(cache)
 
 from app_configs import (
     APP_TITLE,
+    CLASSICAL_TAB_LABEL,
     DEBUG,
+    DWAVE_TAB_LABEL,
     RESOURCE_NAMES,
     SCENARIOS,
     THEME_COLOR,
     THEME_COLOR_SECONDARY,
 )
-from generate_charts import generate_gantt_chart, generate_output_table, get_empty_figure
+from src.generate_charts import generate_gantt_chart, generate_output_table, get_empty_figure, get_minimum_task_times
 from src.job_shop_scheduler import run_shop_scheduler
 from src.model_data import JobShopData
 
@@ -140,9 +142,7 @@ def update_solver_options(
         list: Unselects MIP and selects Hybrid or updates to previously selected solvers.
         list: Updates last_selected_solvers with the list of solvers that were selected before updating.
     """
-
-    if isinstance(model, int):
-        model = Model(model)
+    model = Model(model)
 
     if model is Model.QM:
         return "hide-classic", [SamplerType.HYBRID.value], selected_solvers
@@ -211,8 +211,8 @@ def update_tab_loading_state(
         )
     if ctx.triggered_id == "cancel-button" and cancel_click > 0:
         return (
-            "D-Wave Results",
-            "Classical Results",
+            DWAVE_TAB_LABEL,
+            CLASSICAL_TAB_LABEL,
             dash.no_update,
             dash.no_update,
             dash.no_update,
@@ -295,27 +295,26 @@ def run_optimization_cqm(
         raise PreventUpdate
 
     if SamplerType.HYBRID.value not in solvers:
-        return (dash.no_update, dash.no_update, "tab", "D-Wave Results", True, False)
+        return (dash.no_update, dash.no_update, "tab", DWAVE_TAB_LABEL, True, False)
 
-    if isinstance(model, int):
-        model = Model(model)
-
+    start = time.perf_counter()
+    model = Model(model)
     model_data = JobShopData()
     filename = SCENARIOS[scenario]
+
     model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-    allow_quadratic_constraints = model is Model.QM
-    start = time.time()
+
     results = run_shop_scheduler(
         model_data,
-        use_mip_solver=False,
-        allow_quadratic_constraints=allow_quadratic_constraints,
-        solver_time_limit=time_limit,
+        use_mip_solver = False,
+        allow_quadratic_constraints = model is Model.QM,
+        solver_time_limit = time_limit,
     )
-    end = time.time()
-    fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-    table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
 
-    return (fig, table, "tab-success", "D-Wave Results", False, False)
+    fig = generate_gantt_chart(results)
+    table = generate_output_table(results["Finish"].max(), time_limit, time.perf_counter() - start)
+
+    return (fig, table, "tab-success", DWAVE_TAB_LABEL, False, False)
 
 
 @app.callback(
@@ -361,28 +360,29 @@ def run_optimization_mip(
         raise PreventUpdate
 
     if SamplerType.MIP.value not in solvers:
-        return (dash.no_update, dash.no_update, "tab", "Classical Results", True, False)
+        return (dash.no_update, dash.no_update, "tab", CLASSICAL_TAB_LABEL, True, False)
 
+    start = time.perf_counter()
     model_data = JobShopData()
     filename = SCENARIOS[scenario]
+
     model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
 
-    start = time.time()
     results = run_shop_scheduler(
         model_data,
         use_mip_solver=True,
         allow_quadratic_constraints=False,
         solver_time_limit=time_limit,
     )
-    end = time.time()
-    if results.empy():
-        fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-        class_name = "tab-success"
-        mip_table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
-        return (fig, mip_table, class_name, "Classical Results", False, False)
-    fig = get_empty_figure("No solution found for MIP solver")
-    table = generate_output_table(0, 0, 0)
-    return (fig, table, "tab-fail", "Classical Results", False, False)
+
+    if results.empty:
+        fig = get_empty_figure("No solution found for MIP solver")
+        table = generate_output_table(0, 0, 0)
+        return (fig, table, "tab-fail", CLASSICAL_TAB_LABEL, False, False)
+
+    fig = generate_gantt_chart(results)
+    mip_table = generate_output_table(results["Finish"].max(), time_limit, time.perf_counter() - start)
+    return (fig, mip_table, "tab-success", CLASSICAL_TAB_LABEL, False, False)
 
 
 @app.callback(
@@ -400,7 +400,10 @@ def generate_unscheduled_gantt_chart(scenario: str) -> go.Figure:
     Returns:
         go.Figure: A Plotly figure object with the input data
     """
-    fig = generate_gantt_chart(scenario=scenario, y_axis="Job", color="Resource")
+    model_data = JobShopData()
+    model_data.load_from_file(DATA_PATH.joinpath(SCENARIOS[scenario]), resource_names=RESOURCE_NAMES)
+    df = get_minimum_task_times(model_data)
+    fig = generate_gantt_chart(df)
     return fig
 
 

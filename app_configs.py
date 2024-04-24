@@ -36,7 +36,11 @@ Run the job shop scheduling problem for several different scenarios.
 Explore the Gantt Chart for solution details.
 """
 
-# The list of scenarios that the user can choose from in the app
+CLASSICAL_TAB_LABEL = "Classical Results"
+DWAVE_TAB_LABEL = "D-Wave Results"
+
+# The list of scenarios that the user can choose from in the app.
+# These can be found in the 'input' directory.
 SCENARIOS = {
     "3x3": "instance3_3.txt",
     "5x5": "instance5_5.txt",

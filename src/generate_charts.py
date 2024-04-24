@@ -1,34 +1,16 @@
-"""
-This file is forked from apps/dash-clinical-analytics/app.py under the following license
-
-MIT License
-
-Copyright (c) 2019 Plotly
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-Modifications are licensed under
-
-Apache License, Version 2.0
-(see ./LICENSE for details)
-
-"""
+#    Copyright 2024 D-Wave Systems Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
 import pathlib
 
@@ -41,13 +23,10 @@ from dash import DiskcacheManager
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
-from app_configs import RESOURCE_NAMES, SCENARIOS
 from src.model_data import JobShopData
 
-BASE_PATH = pathlib.Path(__file__).parent.resolve()
-DATA_PATH = BASE_PATH.joinpath("input").resolve()
-
-model_data = JobShopData()
+Y_AXIS_LABEL = "Job"
+COLOR_LABEL = "Resource"
 
 
 def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
@@ -69,17 +48,17 @@ def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
             end_time = start_time + task.duration
             task_data.append(
                 {
-                    "Job": task.job,
+                    Y_AXIS_LABEL: task.job,
                     "Start": start_time,
                     "Finish": end_time,
-                    "Resource": task.resource,
+                    COLOR_LABEL: task.resource,
                 }
             )
             start_time = end_time
     df = pd.DataFrame(task_data)
     df["delta"] = df.Finish - df.Start
-    df["Job"] = df["Job"].astype(str)
-    df["Resource"] = df["Resource"].astype(str)
+    df[Y_AXIS_LABEL] = df[Y_AXIS_LABEL].astype(str)
+    df[COLOR_LABEL] = df[COLOR_LABEL].astype(str)
     return df
 
 
@@ -115,63 +94,46 @@ def get_empty_figure(message: str) -> go.Figure:
 
 
 def generate_gantt_chart(
-    scenario: str = None, df: pd.DataFrame = None, y_axis: str = "Job", color: str = "Resource"
+    df: pd.DataFrame = None
 ) -> go.Figure:
     """Generates a Gantt chart of the unscheduled tasks for the given scenario.
 
     Args:
-        scenario (str): The name of the scenario; must be a key in SCENARIOS.
         df (pd.DataFrame): A DataFrame containing the data to plot. If this is
             not None, then the scenario argument will be ignored.
-        y_axis (str): The column to use for the y-axis of the Gantt chart.
-        color (str): The column to use for the color of the Gantt chart.
 
     Returns:
         go.Figure: A Plotly figure object.
     """
-    if df is None:
-        filename = SCENARIOS[scenario]
-        if "json" in filename:
-            model_data.load_from_json(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-        else:
-            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-        df = get_minimum_task_times(model_data)
-    if y_axis == "Job":
-        if df["Job"].dtype == "object":
-            df["JobInt"] = df["Job"].str.replace("Job", "").astype(int)
-        else:
-            df["JobInt"] = df["Job"]
-        df = df.sort_values(by=["JobInt", color, "Start"])
-        df = df.drop(columns=["JobInt"])
+    if df[Y_AXIS_LABEL].dtype == "object":
+        df["JobInt"] = df[Y_AXIS_LABEL].str.replace(Y_AXIS_LABEL, "").astype(int)
     else:
-        df = df.sort_values(by=[y_axis, color, "Start"])
+        df["JobInt"] = df[Y_AXIS_LABEL]
+    df = df.sort_values(by=["JobInt", COLOR_LABEL, "Start"])
+    df = df.drop(columns=["JobInt"])
+
     df["delta"] = df.Finish - df.Start
-    df[color] = df[color].astype(str)
-    df[y_axis] = df[y_axis].astype(str)
-    num_items = len(df[color].unique())
+    df[COLOR_LABEL] = df[COLOR_LABEL].astype(str)
+    df[Y_AXIS_LABEL] = df[Y_AXIS_LABEL].astype(str)
+    num_items = len(df[COLOR_LABEL].unique())
     colorscale = "Agsunset"
+
     fig = px.timeline(
         df,
         x_start="Start",
         x_end="Finish",
-        y=y_axis,
-        color=color,
+        y=Y_AXIS_LABEL,
+        color=COLOR_LABEL,
         color_discrete_sequence=px.colors.sample_colorscale(
             colorscale, [n / (num_items - 1) for n in range(num_items)]
         ),
     )
 
-    for idx, _ in enumerate(fig.data):
-        resource = fig.data[idx].name
-        data_list = []
-        for job in fig.data[idx].y:
-            try:
-                data_list.append(
-                    df[(df[y_axis] == job) & (df[color] == resource)].delta.tolist()[0]
-                )
-            except:
-                continue
-        fig.data[idx].x = data_list
+    for index, data in enumerate(fig.data):
+        resource = data.name
+        fig.data[index].x = [
+            df[(df[Y_AXIS_LABEL] == job) & (df[COLOR_LABEL] == resource)].delta.tolist()[0] for job in data.y
+        ]
 
     fig.layout.xaxis.type = "linear"
     fig.update_layout(
@@ -198,7 +160,7 @@ def generate_output_table(make_span: int, solver_time_limit: int, total_time: in
         data=[
             go.Table(
                 header=dict(values=["Make-span", "Solver Time Limit", "Total Time"]),
-                cells=dict(values=[[make_span], [solver_time_limit], [total_time]]),
+                cells=dict(values=[[make_span], [f"{solver_time_limit}s"], [f"{total_time:.2f}s"]]),
             )
         ]
     )
