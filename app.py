@@ -306,9 +306,9 @@ def run_optimization_cqm(
 
     results = run_shop_scheduler(
         model_data,
-        use_mip_solver = False,
-        allow_quadratic_constraints = model is Model.QM,
-        solver_time_limit = time_limit,
+        use_mip_solver=False,
+        allow_quadratic_constraints=(model is Model.QM),
+        solver_time_limit=time_limit,
     )
 
     fig = generate_gantt_chart(results)
