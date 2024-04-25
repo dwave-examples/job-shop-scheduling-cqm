@@ -32,19 +32,42 @@ Apache License, Version 2.0
 
 from __future__ import annotations
 
-import dash
 from dash import dcc, html
 
-from app_configs import HTML_CONFIGS, MODEL_OPTIONS, SCENARIOS, SOLVER_OPTIONS
+from app_configs import (
+    CLASSICAL_TAB_LABEL,
+    DESCRIPTION,
+    DWAVE_TAB_LABEL,
+    MAIN_HEADER,
+    SCENARIOS,
+    SOLVER_TIME,
+    THUMBNAIL
+)
+
+MODEL_OPTIONS = ["Mixed Integer Model", "Mixed Integer Quadratic Model"]
+SOLVER_OPTIONS = ["D-Wave Hybrid Solver", "Classical Solver (COIN-OR Branch-and-Cut)"]
 
 
 def description_card():
     """A Div containing dashboard title & descriptions."""
     return html.Div(
         id="description-card",
+        children=[html.H1(MAIN_HEADER), html.P(DESCRIPTION)],
+    )
+
+
+def dropdown(label: str, id: str, options: list) -> html.Div:
+    """Slider element for value selection."""
+    return html.Div(
         children=[
-            html.H1(HTML_CONFIGS["main_header"]),
-            html.P(children=HTML_CONFIGS["welcome_instructions"]),
+            html.Label(label),
+            dcc.Dropdown(
+                id=id,
+                options=options,
+                value=options[0]["value"],
+                clearable=False,
+                searchable=False,
+            ),
         ],
     )
 
@@ -58,34 +81,27 @@ def generate_control_card() -> html.Div:
         html.Div: A Div containing the dropdowns for selecting the scenario,
         model, and solver.
     """
-    scenario_options = []
-    for scenario in SCENARIOS:
-        scenario_options.append({"label": scenario, "value": scenario})
-    model_options = []
-    for model_option, model_value in MODEL_OPTIONS.items():
-        model_options.append({"label": model_option, "value": model_value})
-    solver_options = []
-    for solver_option, solver_value in SOLVER_OPTIONS.items():
-        solver_options.append({"label": solver_option, "value": solver_value})
+
+    scenario_options = [{"label": scenario, "value": scenario} for scenario in SCENARIOS]
+    model_options = [
+        {"label": model_option, "value": i} for i, model_option in enumerate(MODEL_OPTIONS)
+    ]
+    solver_options = [
+        {"label": solver_value, "value": i} for i, solver_value in enumerate(SOLVER_OPTIONS)
+    ]
 
     return html.Div(
         id="control-card",
         children=[
-            html.Label("Scenario (jobs x resources)"),
-            dcc.Dropdown(
-                id="scenario-select",
-                options=scenario_options,
-                value=scenario_options[0]["value"],
-                clearable=False,
-                searchable=False,
+            dropdown(
+                "Scenario (jobs x resources)",
+                "scenario-select",
+                scenario_options,
             ),
-            html.Label("Model"),
-            dcc.Dropdown(
-                id="model-select",
-                options=model_options,
-                value=model_options[0]["value"],
-                clearable=False,
-                searchable=False,
+            dropdown(
+                "Model",
+                "model-select",
+                model_options,
             ),
             html.Label("Solver"),
             dcc.Checklist(
@@ -93,14 +109,11 @@ def generate_control_card() -> html.Div:
                 options=solver_options,
                 value=[solver_options[0]["value"]],
             ),
-            html.Label("Solver Time Limit"),
+            html.Label("Solver Time Limit (seconds)"),
             dcc.Input(
-                id="solver_time_limit",
+                id="solver-time-limit",
                 type="number",
-                value=HTML_CONFIGS["solver_options"]["default_time_seconds"],
-                min=HTML_CONFIGS["solver_options"]["min_time_seconds"],
-                max=HTML_CONFIGS["solver_options"]["max_time_seconds"],
-                step=HTML_CONFIGS["solver_options"]["time_step_seconds"],
+                **SOLVER_TIME,
             ),
             html.Div(
                 id="button-group",
@@ -110,7 +123,7 @@ def generate_control_card() -> html.Div:
                         id="cancel-button",
                         children="Cancel Optimization",
                         n_clicks=0,
-                        style={"display": "none"},
+                        className="display-none",
                     ),
                 ],
             ),
@@ -124,12 +137,10 @@ def set_html(app):
         id="app-container",
         children=[
             dcc.Store("last-selected-solvers"),
+            dcc.Store("running-dwave"),
+            dcc.Store("running-classical"),
             # Banner
-            html.Div(
-                id="banner",
-                className="banner",
-                children=[html.Img(src="assets/dwave_logo.svg")],
-            ),
+            html.Div(id="banner", children=[html.Img(src=THUMBNAIL)]),
             html.Div(
                 id="columns",
                 children=[
@@ -163,27 +174,27 @@ def set_html(app):
                         children=[
                             dcc.Tabs(
                                 id="tabs",
-                                value="input_tab",
+                                value="input-tab",
                                 children=[
                                     dcc.Tab(
-                                        label=HTML_CONFIGS["tabs"]["input"]["name"],
-                                        value="input_tab",
+                                        label="Input",
+                                        value="input-tab",
                                         className="tab",
                                         children=[
                                             html.Div(
                                                 html.Div(
-                                                    id="unscheduled_gantt_chart_card",
+                                                    id="unscheduled-gantt-chart-card",
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(
-                                                            HTML_CONFIGS["tabs"]["input"]["header"],
+                                                            "Unscheduled Jobs and Resources",
                                                             className="gantt-title",
                                                         ),
                                                         dcc.Loading(
                                                             id="loading-icon-input",
                                                             children=[
                                                                 dcc.Graph(
-                                                                    id="unscheduled_gantt_chart",
+                                                                    id="unscheduled-gantt-chart",
                                                                     responsive=True,
                                                                 ),
                                                             ],
@@ -194,51 +205,51 @@ def set_html(app):
                                         ],
                                     ),
                                     dcc.Tab(
-                                        label=HTML_CONFIGS["tabs"]["dwave"]["name"],
-                                        value="dwave_tab",
-                                        id="dwave_tab",
+                                        label=DWAVE_TAB_LABEL,
+                                        value="dwave-tab",
+                                        id="dwave-tab",
                                         className="tab",
+                                        disabled=True,
                                         children=[
                                             html.Div(
                                                 html.Div(
-                                                    id="optimized_gantt_chart_card",
+                                                    id="optimized-gantt-chart-card",
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(
-                                                            HTML_CONFIGS["tabs"]["dwave"]["header"],
+                                                            "D-Wave Hybrid Solver",
                                                             className="gantt-title",
                                                         ),
                                                         dcc.Graph(
-                                                            id="optimized_gantt_chart",
+                                                            id="optimized-gantt-chart",
                                                             responsive=True,
                                                         ),
-                                                        dcc.Graph(id="dwave_summary_table"),
+                                                        dcc.Graph(id="dwave-summary-table"),
                                                     ],
                                                 )
                                             )
                                         ],
                                     ),
                                     dcc.Tab(
-                                        label=HTML_CONFIGS["tabs"]["classical"]["name"],
-                                        id="mip_tab",
+                                        label=CLASSICAL_TAB_LABEL,
+                                        id="mip-tab",
                                         className="tab",
-                                        value="mip_tab",
+                                        value="mip-tab",
+                                        disabled=True,
                                         children=[
                                             html.Div(
                                                 html.Div(
-                                                    id="mip_gantt_chart_card",
+                                                    id="mip-gantt-chart-card",
                                                     className="gantt-div",
                                                     children=[
                                                         html.H3(
-                                                            HTML_CONFIGS["tabs"]["classical"][
-                                                                "header"
-                                                            ],
+                                                            "Classical Solver (COIN-OR Branch-and-Cut)",
                                                             className="gantt-title",
                                                         ),
                                                         dcc.Graph(
-                                                            id="mip_gantt_chart", responsive=True
+                                                            id="mip-gantt-chart", responsive=True
                                                         ),
-                                                        dcc.Graph(id="mip_summary_table"),
+                                                        dcc.Graph(id="mip-summary-table"),
                                                     ],
                                                 )
                                             )

@@ -32,11 +32,10 @@ Apache License, Version 2.0
 
 import pathlib
 import time
+from enum import Enum
 
 import dash
 import diskcache
-import pandas as pd
-import plotly.express as px
 import plotly.graph_objs as go
 from dash import DiskcacheManager, ctx
 from dash.dependencies import ClientsideFunction, Input, Output, State
@@ -47,7 +46,17 @@ from dash_html import set_html
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
-from app_configs import HTML_CONFIGS, RESOURCE_NAMES, SCENARIOS
+from app_configs import (
+    APP_TITLE,
+    CLASSICAL_TAB_LABEL,
+    DEBUG,
+    DWAVE_TAB_LABEL,
+    RESOURCE_NAMES,
+    SCENARIOS,
+    THEME_COLOR,
+    THEME_COLOR_SECONDARY,
+)
+from src.generate_charts import generate_gantt_chart, generate_output_table, get_empty_figure, get_minimum_task_times
 from src.job_shop_scheduler import run_shop_scheduler
 from src.model_data import JobShopData
 
@@ -57,7 +66,7 @@ app = dash.Dash(
     prevent_initial_callbacks="initial_duplicate",
     background_callback_manager=background_callback_manager,
 )
-app.title = HTML_CONFIGS["title"]
+app.title = APP_TITLE
 
 server = app.server
 app.config.suppress_callback_exceptions = True
@@ -65,7 +74,25 @@ app.config.suppress_callback_exceptions = True
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
 DATA_PATH = BASE_PATH.joinpath("input").resolve()
 
-model_data = JobShopData()
+# Generates css file and variable using THEME_COLOR and THEME_COLOR_SECONDARY settings
+css = f"""/* Generated theme settings css file, see app.py */
+:root {{
+    --theme: {THEME_COLOR};
+    --theme-secondary: {THEME_COLOR_SECONDARY};
+}}
+"""
+with open("assets/theme.css", "w") as f:
+    f.write(css)
+
+
+class Model(Enum):
+    MIP = 0
+    QM = 1
+
+
+class SamplerType(Enum):
+    HYBRID = 0
+    MIP = 1
 
 
 @app.callback(
@@ -86,9 +113,7 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
     Returns:
         str: The new class name of the left column.
     """
-    if class_name:
-        return ""
-    return "collapsed"
+    return "" if class_name else "collapsed"
 
 
 @app.callback(
@@ -102,357 +127,264 @@ def toggle_left_column(left_column_collapse: int, class_name: str) -> str:
     ],
     prevent_initial_call=True,
 )
-def update_solver_options(model_value: str, selected_solvers: list[str], last_selected_solvers: list[str]) -> list[str]:
+def update_solver_options(
+    model: int, selected_solvers: list[int], last_selected_solvers: list[int]
+) -> tuple[str, list[int], list[int]]:
     """Hides and shows classical solver option using 'hide-classic' class
 
     Args:
-        model_value (str): Currently selected model from model-select dropdown.
-        selected_solvers (list[str]): Currently selected solvers.
-        last_selected_solvers (list[str]): Previously selected solvers.
+        model_value (int): Currently selected model from model-select dropdown.
+        selected_solvers (list[int]): Currently selected solvers.
+        last_selected_solvers (list[int]): Previously selected solvers.
 
     Returns:
         str: The new class name of the solver-select checklist.
         list: Unselects MIP and selects Hybrid or updates to previously selected solvers.
         list: Updates last_selected_solvers with the list of solvers that were selected before updating.
     """
+    model = Model(model)
 
-    if model_value == "QM":
-        return "hide-classic", ["Hybrid"], selected_solvers
+    if model is Model.QM:
+        return "hide-classic", [SamplerType.HYBRID.value], selected_solvers
     return "", last_selected_solvers, dash.no_update
 
 
-def get_minimum_task_times(job_shop_data: JobShopData) -> pd.DataFrame:
-    """Takes a JobShopData object, gets the minimum time each
-    task can be completed by, and generates the Jobs to Be Scheduled
-    Gantt chart.
-
-    Args:
-        job_shop_data (JobShopData): The data for the job shop scheduling problem.
-
-    Returns:
-        pd.DataFrame: A DataFrame of the jobs to be scheduled including Task, Start, Finish,
-        Resource, and delta.
-    """
-    task_data = []
-    for tasks in job_shop_data.job_tasks.values():
-        start_time = 0
-        for task in tasks:
-            end_time = start_time + task.duration
-            task_data.append(
-                {
-                    "Job": task.job,
-                    "Start": start_time,
-                    "Finish": end_time,
-                    "Resource": task.resource,
-                }
-            )
-            start_time = end_time
-    df = pd.DataFrame(task_data)
-    df["delta"] = df.Finish - df.Start
-    df["Job"] = df["Job"].astype(str)
-    df["Resource"] = df["Resource"].astype(str)
-    return df
-
-
-def get_empty_figure(message: str) -> go.Figure:
-    """Generates an empty chart figure message.
-    This is used to replace the chart object
-    when no chart is available.
-
-    Args:
-        message (str): The message to display in the center of the chart.
-
-    Returns:
-        go.Figure: A Plotly figure object containing the message.
-    """
-    fig = go.Figure()
-    fig.update_layout(
-        xaxis={"visible": False},
-        yaxis={"visible": False},
-        annotations=[
-            {
-                "text": message,
-                "xref": "paper",
-                "yref": "paper",
-                "showarrow": False,
-                "font": {"size": 28},
-            }
-        ],
-    )
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=10, b=10),
-    )
-    return fig
-
-
 @app.callback(
-    Output("optimized_gantt_chart", "figure", allow_duplicate=True),
-    Output("mip_gantt_chart", "figure", allow_duplicate=True),
-    Output("dwave_summary_table", "figure", allow_duplicate=True),
-    Output("mip_summary_table", "figure", allow_duplicate=True),
-    Output("dwave_summary_table", "style", allow_duplicate=True),
-    Output("mip_summary_table", "style", allow_duplicate=True),
-    [Input("run-button", "n_clicks")],
-    prevent_initial_call=False,
-)
-def load_initial_figures(
-    n_clicks: int,
-) -> tuple[go.Figure, go.Figure, go.Figure, go.Figure, dict, dict]:
-    """Loads the initial figures for the Gantt charts.
-
-    Args:
-        n_clicks (int): The number of times the run button has been
-        clicked.
-
-    Returns:
-        go.Figure: Gantt chart for the D-Wave hybrid solver
-        go.Figure: Gantt chart for the Classical solver
-        go.Figure: Results table for the D-Wave hybrid solver
-        go.Figure: Results table for the Classical solver
-        dict: Style for the D-Wave summary table
-        dict: Style for the Classical summary table
-    """
-    if n_clicks == 0:
-        empty_figure = get_empty_figure("Run optimization to see results")
-        empty_table = generate_output_table(0, 0, 0)
-        return (
-            empty_figure,
-            empty_figure,
-            empty_table,
-            empty_table,
-            {"visibility": "hidden"},
-            {"visibility": "hidden"},
-        )
-    else:
-        raise PreventUpdate
-
-
-@app.callback(
-    Output("dwave_tab", "className", allow_duplicate=True),
-    Output("mip_tab", "className", allow_duplicate=True),
-    Output("optimized_gantt_chart", "figure", allow_duplicate=True),
-    Output("mip_gantt_chart", "figure", allow_duplicate=True),
-    Output("dwave_summary_table", "style", allow_duplicate=True),
-    Output("mip_summary_table", "style", allow_duplicate=True),
-    [Input("run-button", "n_clicks"), Input("cancel-button", "n_clicks")],
+    Output("dwave-tab", "label", allow_duplicate=True),
+    Output("mip-tab", "label", allow_duplicate=True),
+    Output("dwave-tab", "disabled", allow_duplicate=True),
+    Output("mip-tab", "disabled", allow_duplicate=True),
+    Output("dwave-tab", "className", allow_duplicate=True),
+    Output("mip-tab", "className", allow_duplicate=True),
+    Output("run-button", "className", allow_duplicate=True),
+    Output("cancel-button", "className", allow_duplicate=True),
+    Output("running-dwave", "data", allow_duplicate=True),
+    Output("running-classical", "data", allow_duplicate=True),
+    Output("tabs", "value"),
+    [
+        Input("run-button", "n_clicks"),
+        Input("cancel-button", "n_clicks"),
+        State("solver-select", "value"),
+    ],
 )
 def update_tab_loading_state(
-    run_click: int, cancel_click: int
-) -> tuple[str, str, go.Figure, go.Figure, dict, dict]:
+    run_click: int, cancel_click: int, solvers: list[str]
+) -> tuple[str, str, bool, bool, str, str, str, str, bool, bool, str]:
     """Updates the tab loading state after the run button
     or cancel button has been clicked.
 
     Args:
-        run_click (int): The number of times the run button has been
-            clicked.
-        cancel_click (int): The number of times the cancel button has
-            been clicked.
+        run_click (int): The number of times the run button has been clicked.
+        cancel_click (int): The number of times the cancel button has been clicked.
+        solvers (list[str]): The list of selected solvers.
 
     Returns:
-        str: Class name for the D-Wave tab
-        str: Class name for the Classical tab
-        go.Figure: Figure for the D-Wave tab
-        go.Figure: Figure for the Classical tab
-        dict: Style for the D-Wave summary table
-        dict: Style for the Classical summary table
+        str: The label for the D-Wave tab.
+        str: The label for the Classical tab.
+        bool: True if D-Wave tab should be disabled, False otherwise.
+        bool: True if Classical tab should be disabled, False otherwise.
+        str: Class name for the D-Wave tab.
+        str: Class name for the Classical tab.
+        str: Run button class.
+        str: Cancel button class.
+        bool: Whether Hybrid is running.
+        bool: Whether MIP is running.
+        str: The value of the tab that should be active.
     """
-    if ctx.triggered_id == "run-button":
-        if run_click == 0:
-            empty_figure = get_empty_figure("Run optimization to see results")
-            return (
-                "tab",
-                "tab",
-                empty_figure,
-                empty_figure,
-                {"visibility": "hidden"},
-                {"visibility": "hidden"},
-            )
-        else:
-            empty_figure = get_empty_figure("Running...")
-            return (
-                "tab-loading",
-                "tab-loading",
-                empty_figure,
-                empty_figure,
-                {"visibility": "hidden"},
-                {"visibility": "hidden"},
-            )
-    elif ctx.triggered_id == "cancel-button":
-        if cancel_click > 0:
-            empty_figure = get_empty_figure(
-                "Last run cancelled prior to completion. Re-run to see results"
-            )
-            return (
-                "tab",
-                "tab",
-                empty_figure,
-                empty_figure,
-                {"visibility": "hidden"},
-                {"visibility": "hidden"},
-            )
+
+    if ctx.triggered_id == "run-button" and run_click > 0:
+        run_hybrid = SamplerType.HYBRID.value in solvers
+        run_mip = SamplerType.MIP.value in solvers
+
+        return (
+            "Loading..." if run_hybrid else dash.no_update,
+            "Loading..." if run_mip else dash.no_update,
+            True if run_hybrid else dash.no_update,
+            True if run_mip else dash.no_update,
+            "tab",
+            "tab",
+            "display-none",
+            "",
+            run_hybrid,
+            run_mip,
+            "input-tab",
+        )
+    if ctx.triggered_id == "cancel-button" and cancel_click > 0:
+        return (
+            DWAVE_TAB_LABEL,
+            CLASSICAL_TAB_LABEL,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            "",
+            "display-none",
+            False,
+            False,
+            dash.no_update,
+        )
     raise PreventUpdate
 
 
 @app.callback(
-    Output("optimized_gantt_chart", "figure"),
-    Output("dwave_summary_table", "figure"),
-    Output("dwave_tab", "className"),
-    Output("dwave_summary_table", "style"),
+    Output("run-button", "className"),
+    Output("cancel-button", "className"),
+    background=True,
+    inputs=[
+        Input("running-dwave", "data"),
+        Input("running-classical", "data"),
+    ],
+    prevent_initial_call=True,
+)
+def update_button_visibility(running_dwave: bool, running_classical: bool) -> tuple[str, str]:
+    """Updates the visibility of the run and cancel buttons.
+
+    Args:
+        running_dwave (bool): Whether the D-Wave solver is running.
+        running_classical (bool): Whether the Classical solver is running.
+
+    Returns:
+        str: Run button class.
+        str: Cancel button class.
+    """
+    if not running_classical and not running_dwave:
+        return "", "display-none"
+
+    return "display-none", ""
+
+
+@app.callback(
+    Output("optimized-gantt-chart", "figure"),
+    Output("dwave-summary-table", "figure"),
+    Output("dwave-tab", "className"),
+    Output("dwave-tab", "label"),
+    Output("dwave-tab", "disabled"),
+    Output("running-dwave", "data"),
     background=True,
     inputs=[
         Input("run-button", "n_clicks"),
         State("model-select", "value"),
         State("solver-select", "value"),
         State("scenario-select", "value"),
-        State("solver_time_limit", "value"),
-    ],
-    running=[
-        (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
-        (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+        State("solver-time-limit", "value"),
     ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def run_optimization_cqm(
-    run_click: int, model: str, solver: str, scenario: str, time_limit: int
-) -> tuple[go.Figure, go.Figure, str, dict]:
+    run_click: int, model: int, solvers: list[int], scenario: str, time_limit: int
+) -> tuple[go.Figure, go.Figure, str, str, bool, bool]:
     """Runs optimization using the D-Wave hybrid solver.
 
     Args:
-        run_click (int): The number of times the run button has been
-            clicked.
-        model (str): The model to use for the optimization.
-        solver (str): The solver to use for the optimization.
+        run_click (int): The number of times the run button has been clicked.
+        model (int): The model to use for the optimization.
+        solvers (list[int]): The solvers that have been selected.
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
     Returns:
-        go.Figure: Gantt chart for the D-Wave hybrid solver
-        go.Figure: Results table for the D-Wave hybrid solver
-        str: Class name for the D-Wave tab
-        dict: Style for the D-Wave summary table
+        go.Figure: Gantt chart for the D-Wave hybrid solver.
+        go.Figure: Results table for the D-Wave hybrid solver.
+        str: Class name for the D-Wave tab.
+        str: The label for the D-Wave tab.
+        bool: True if D-Wave tab should be disabled, False otherwise.
+        bool: Whether D-Wave solver is running.
     """
-    if run_click == 0 or ctx.triggered_id != "run-button":
-        empty_figure = get_empty_figure("Run optimization to see results")
-        return empty_figure, "tab"
-    if ctx.triggered_id == "run-button":
-        if "Hybrid" in solver:
-            model_data = JobShopData()
-            filename = SCENARIOS[scenario]
-            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-            allow_quadratic_constraints = model == "QM"
-            start = time.time()
-            results = run_shop_scheduler(
-                model_data,
-                use_mip_solver=False,
-                allow_quadratic_constraints=allow_quadratic_constraints,
-                solver_time_limit=time_limit,
-            )
-            end = time.time()
-            fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-            table = generate_output_table(results["Finish"].max(), time_limit, int(end - start))
-            return fig, table, "tab-success", {"visibility": "visible"}
-        else:
-            time.sleep(0.1)
-            empty_figure = get_empty_figure(
-                HTML_CONFIGS["solver_messages"]["dwave"]["solver_not_chosen"]
-            )
-            table = generate_output_table(0, 0, 0)
-            return empty_figure, table, "tab-warning", {"visibility": "hidden"}
-    else:
+    if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
+
+    if SamplerType.HYBRID.value not in solvers:
+        return (dash.no_update, dash.no_update, "tab", DWAVE_TAB_LABEL, dash.no_update, False)
+
+    start = time.perf_counter()
+    model = Model(model)
+    model_data = JobShopData()
+    filename = SCENARIOS[scenario]
+
+    model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
+
+    results = run_shop_scheduler(
+        model_data,
+        use_mip_solver=False,
+        allow_quadratic_constraints=(model is Model.QM),
+        solver_time_limit=time_limit,
+    )
+
+    fig = generate_gantt_chart(results)
+    table = generate_output_table(results["Finish"].max(), time_limit, time.perf_counter() - start)
+
+    return (fig, table, "tab-success", DWAVE_TAB_LABEL, False, False)
 
 
 @app.callback(
-    Output("mip_gantt_chart", "figure"),
-    Output("mip_summary_table", "figure"),
-    Output("mip_tab", "className"),
-    Output("mip_summary_table", "style"),
+    Output("mip-gantt-chart", "figure"),
+    Output("mip-summary-table", "figure"),
+    Output("mip-tab", "className"),
+    Output("mip-tab", "label"),
+    Output("mip-tab", "disabled"),
+    Output("running-classical", "data"),
     background=True,
     inputs=[
         Input("run-button", "n_clicks"),
-        State("model-select", "value"),
         State("solver-select", "value"),
         State("scenario-select", "value"),
-        State("solver_time_limit", "value"),
-    ],
-    running=[
-        (Output("cancel-button", "style"), {"display": "inline-block"}, {"display": "none"}),
-        (Output("run-button", "style"), {"display": "none"}, {"display": "inline-block"}),
+        State("solver-time-limit", "value"),
     ],
     cancel=[Input("cancel-button", "n_clicks")],
     prevent_initial_call=True,
 )
 def run_optimization_mip(
-    run_click: int, model: str, solver: str, scenario: str, time_limit: int
-) -> tuple[go.Figure, go.Figure, str, dict]:
+    run_click: int, solvers: list[int], scenario: str, time_limit: int
+) -> tuple[go.Figure, go.Figure, str, str, bool, bool]:
     """Runs optimization using the COIN-OR Branch-and-Cut solver.
 
     Args:
         run_click (int): The number of times the run button has been
             clicked.
-        model (str): The model to use for the optimization.
-        solver (str): The solver to use for the optimization.
+        solvers (list[int]): The solvers that have been selected.
         scenario (str): The scenario to use for the optimization.
         time_limit (int): The time limit for the optimization.
 
     Returns:
-        go.Figure: Gantt chart for the Classical solver
-        go.Figure: Results table for the Classical solver
-        str: Class name for the Classical tab
-        dict: Style for the Classical summary table
+        go.Figure: Gantt chart for the Classical solver.
+        go.Figure: Results table for the Classical solver.
+        str: Class name for the Classical tab.
+        str: The label for the Classical tab.
+        bool: True if Classical tab should be disabled, False otherwise.
+        bool: Whether Classical solver is running.
     """
-    if run_click == 0:
-        empty_figure = get_empty_figure("Run optimization to see results")
-        return empty_figure, "tab"
-    if ctx.triggered_id == "run-button":
-        if "MIP" in solver:
-            model_data = JobShopData()
-            filename = SCENARIOS[scenario]
-            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-            use_mip_solver = True
-            allow_quadratic_constraints = model == "QM"
-            if allow_quadratic_constraints:
-                time.sleep(0.1)  # sleep to allow the loading icon to appear first
-                fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["quadratic_error"])
-                class_name = "tab-fail"
-                mip_table = generate_output_table(0, 0, 0)
-                mip_table_style = {"visibility": "hidden"}
-            else:
-                start = time.time()
-                results = run_shop_scheduler(
-                    model_data,
-                    use_mip_solver=use_mip_solver,
-                    allow_quadratic_constraints=allow_quadratic_constraints,
-                    solver_time_limit=time_limit,
-                )
-                end = time.time()
-                if len(results) == 0:
-                    fig = get_empty_figure(HTML_CONFIGS["solver_messages"]["mip"]["no_solution"])
-                    mip_table = generate_output_table(0, 0, 0)
-                    class_name = "tab-fail"
-                    mip_table_style = {"visibility": "hidden"}
-                else:
-                    fig = generate_gantt_chart(df=results, y_axis="Job", color="Resource")
-                    class_name = "tab-success"
-                    mip_table = generate_output_table(
-                        results["Finish"].max(), time_limit, int(end - start)
-                    )
-                    mip_table_style = {"visibility": "visible"}
-            return fig, mip_table, class_name, mip_table_style
-        else:
-            time.sleep(0.1)  # sleep to allow the loading icon to appear first
-            message = HTML_CONFIGS["solver_messages"]["mip"]["solver_not_chosen"]
-            empty_figure = get_empty_figure(message)
-            mip_table = generate_output_table(0, 0, 0)
-            mip_table_style = {"visibility": "hidden"}
-            return empty_figure, mip_table, "tab-warning", mip_table_style
-    else:
+    if ctx.triggered_id != "run-button" or run_click == 0:
         raise PreventUpdate
+
+    if SamplerType.MIP.value not in solvers:
+        return (dash.no_update, dash.no_update, "tab", CLASSICAL_TAB_LABEL, dash.no_update, False)
+
+    start = time.perf_counter()
+    model_data = JobShopData()
+    filename = SCENARIOS[scenario]
+
+    model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
+
+    results = run_shop_scheduler(
+        model_data,
+        use_mip_solver=True,
+        allow_quadratic_constraints=False,
+        solver_time_limit=time_limit,
+    )
+
+    if results.empty:
+        fig = get_empty_figure("No solution found for Classical solver")
+        table = generate_output_table(0, time_limit, time.perf_counter() - start)
+        return (fig, table, "tab-fail", CLASSICAL_TAB_LABEL, False, False)
+
+    fig = generate_gantt_chart(results)
+    mip_table = generate_output_table(results["Finish"].max(), time_limit, time.perf_counter() - start)
+    return (fig, mip_table, "tab-success", CLASSICAL_TAB_LABEL, False, False)
 
 
 @app.callback(
-    Output("unscheduled_gantt_chart", "figure"),
+    Output("unscheduled-gantt-chart", "figure"),
     [
         Input("scenario-select", "value"),
     ],
@@ -466,99 +398,10 @@ def generate_unscheduled_gantt_chart(scenario: str) -> go.Figure:
     Returns:
         go.Figure: A Plotly figure object with the input data
     """
-    fig = generate_gantt_chart(scenario=scenario, y_axis="Job", color="Resource")
-    return fig
-
-
-def generate_gantt_chart(
-    scenario: str = None, df: pd.DataFrame = None, y_axis: str = "Job", color: str = "Resource"
-) -> go.Figure:
-    """Generates a Gantt chart of the unscheduled tasks for the given scenario.
-
-    Args:
-        scenario (str): The name of the scenario; must be a key in SCENARIOS.
-        df (pd.DataFrame): A DataFrame containing the data to plot. If this is
-            not None, then the scenario argument will be ignored.
-        y_axis (str): The column to use for the y-axis of the Gantt chart.
-        color (str): The column to use for the color of the Gantt chart.
-
-    Returns:
-        go.Figure: A Plotly figure object.
-    """
-    if df is None:
-        filename = SCENARIOS[scenario]
-        if "json" in filename:
-            model_data.load_from_json(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-        else:
-            model_data.load_from_file(DATA_PATH.joinpath(filename), resource_names=RESOURCE_NAMES)
-        df = get_minimum_task_times(model_data)
-    if y_axis == "Job":
-        if df["Job"].dtype == "object":
-            df["JobInt"] = df["Job"].str.replace("Job", "").astype(int)
-        else:
-            df["JobInt"] = df["Job"]
-        df = df.sort_values(by=["JobInt", color, "Start"])
-        df = df.drop(columns=["JobInt"])
-    else:
-        df = df.sort_values(by=[y_axis, color, "Start"])
-    df["delta"] = df.Finish - df.Start
-    df[color] = df[color].astype(str)
-    df[y_axis] = df[y_axis].astype(str)
-    num_items = len(df[color].unique())
-    colorscale = "Agsunset"
-    fig = px.timeline(
-        df,
-        x_start="Start",
-        x_end="Finish",
-        y=y_axis,
-        color=color,
-        color_discrete_sequence=px.colors.sample_colorscale(
-            colorscale, [n / (num_items - 1) for n in range(num_items)]
-        ),
-    )
-
-    for idx, _ in enumerate(fig.data):
-        resource = fig.data[idx].name
-        data_list = []
-        for job in fig.data[idx].y:
-            try:
-                data_list.append(
-                    df[(df[y_axis] == job) & (df[color] == resource)].delta.tolist()[0]
-                )
-            except:
-                continue
-        fig.data[idx].x = data_list
-
-    fig.layout.xaxis.type = "linear"
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=10, b=10),
-        xaxis_title="Time Period",
-    )
-    return fig
-
-
-def generate_output_table(make_span: int, solver_time_limit: int, total_time: int) -> go.Figure:
-    """Generates an output table for the optimization results.
-    The table will contain the make-span, solver time limit, and total time
-    for the optimization.
-
-    Args:
-        make_span (int): The make-span for the optimization.
-        solver_time_limit (int): The solver time limit for the optimization.
-        total_time (int): The total time for the optimization.
-
-    Returns:
-        go.Figure: A Plotly figure object containing the output table.
-    """
-    fig = go.Figure(
-        data=[
-            go.Table(
-                header=dict(values=["Make-span", "Solver Time Limit", "Total Time"]),
-                cells=dict(values=[[make_span], [solver_time_limit], [total_time]]),
-            )
-        ]
-    )
-    fig.update_layout(margin=dict(l=20, r=20, t=10, b=10), height=100, autosize=False)
+    model_data = JobShopData()
+    model_data.load_from_file(DATA_PATH.joinpath(SCENARIOS[scenario]), resource_names=RESOURCE_NAMES)
+    df = get_minimum_task_times(model_data)
+    fig = generate_gantt_chart(df)
     return fig
 
 
@@ -576,4 +419,4 @@ app.clientside_callback(
 
 # Run the server
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=DEBUG)

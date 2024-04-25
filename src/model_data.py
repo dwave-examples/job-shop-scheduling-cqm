@@ -1,4 +1,3 @@
-import json
 import sys
 from collections.abc import Iterable
 
@@ -288,16 +287,6 @@ class JobShopData:
             for task in job_tasks
             if task.resource == resource
         ]
-
-    def load_from_json(self, json_file: str, resource_names: list = None) -> None:
-        """Loads data from a JSON file.
-
-        Args:
-            json_file (str): the JSON file to load data from
-        """
-        self.__init__()
-        jobs = json.load(open(json_file, "r"))
-        self.load_from_dict(jobs, resource_names=resource_names)
 
     def load_from_dict(self, jobs: dict, resource_names: list = None) -> None:
         """Loads data from a dictionary.
