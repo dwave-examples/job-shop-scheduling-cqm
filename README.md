@@ -10,12 +10,39 @@
 
 This example demonstrates a means of formulating and optimizing job shop  scheduling (JSS) using a [constrained quadratic model](https://docs.dwavequantum.com/en/latest/concepts/models.html#constrained-quadratic-model) (CQM) that can be solved using a Leap hybrid CQM solver. Contained in this example is the code for running the job shop scheduler as well as a user interface built with [Dash](https://dash.plotly.com/).
 
-## Usage
-To run the job shop demo with the user interface, from the command line enter
+## Installation
 
-    python app.py
-  
-This will launch a local instance of the application on localhost. The default run location is http://127.0.0.1:8050/. Open the location in a web browser to view the application.
+You can run this example without installation in cloud-based IDEs that support
+the
+[Development Containers specification](https://containers.dev/supporting) (aka
+"devcontainers") such as GitHub Codespaces.
+
+For development environments that do not support `devcontainers`, install
+requirements:
+
+```bash
+pip install -r requirements.txt
+```
+
+If you are cloning the repo to your local system, working in a
+[virtual environment](https://docs.python.org/3/library/venv.html) is
+recommended.
+
+## Usage
+
+Your development environment should be configured to access the
+[Leap&trade; quantum cloud service](https://docs.dwavequantum.com/en/latest/ocean/sapi_access_basic.html).
+You can see information about supported IDEs and authorizing access to your Leap
+account
+[here](https://docs.dwavequantum.com/en/latest/leap_sapi/dev_env.html).
+
+Run the following terminal command to start the Dash application:
+
+```bash
+python app.py
+```
+
+Access the user interface with your browser at http://127.0.0.1:8050/.
 
 To run the stand-alone job shop demo (without the user interace), use the command:
 
