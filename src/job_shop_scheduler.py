@@ -239,7 +239,7 @@ class JobShopSchedulingCQM:
             model_data (JobShopData): a JobShopData data class
             profile (str): The profile variable to pass to the Sampler. Defaults to None.
             See documentation at
-            https://docs.ocean.dwavesys.com/en/stable/docs_cloud/reference/generated/dwave.cloud.config.load_config.html#dwave.cloud.config.load_config
+            https://docs.dwavequantum.com/en/latest/ocean/api_ref_cloud/generated/dwave.cloud.config.load_config.html
 
         Modifies:
             self.feasible_sampleset: a SampleSet object containing the feasible solutions
