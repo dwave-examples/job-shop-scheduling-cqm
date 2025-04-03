@@ -203,9 +203,12 @@ constraints:
 There are two cases:
 
 -   if `y_j,k,i = 0` job `j` is processed after job `k`:
+
     ![equation2_1](_static/eq2_1.png)
 -   if `y_j,k,i = 1` job `k` is processed after job `j`:
+
     ![equation2_2](_static/eq2_2.png)
+
     Since these equations are applied to every pair of jobs, they guarantee that
     the jobs don't overlap on a machine. If -allow_quad is set to False, this
     mixed integer formulation of this constraint will be used.
