@@ -183,3 +183,68 @@ def read_taillard_instance(instance_path: str) -> dict:
         assert len(job_dict[0]) == num_machines
 
         return job_dict
+
+
+def is_valid_schedule(solution , job_operations) -> bool:
+    """ Validates a job shop scheduling solution against resource availability and job precedence constraints.
+
+    Args:
+        solution : dict
+            A dictionary mapping (job_id, resource_id) tuples to (start_time, duration) tuples.
+            Example: {(0, 1): (0, 3), (0, 2): (3, 4), (1, 1): (3, 2), ...}
+
+        job_operations : list of dict
+            A list of operations, where each operation is a dictionary with:
+                - 'job': job ID
+                - 'resource': resource (machine) ID
+                - 'duration': duration of the operation
+            The order of operations in the list defines the execution order for each job.
+
+    Returns:
+        bool
+            True if the schedule is valid (i.e., no resource conflicts and job precedence is respected),
+            False otherwise. Prints debug information if a constraint is violated.
+
+    Validity Conditions:
+    -------------------
+    1. No two operations on the same resource may overlap in time.
+    2. Job Precedence Constraint: For each job, operations must be performed in the given order,
+       meaning the start time of an operation must not precede the end time of its predecessor.
+    """
+
+    # Step 1: Build job_routes (ordered tasks per job)
+    job_routes = defaultdict(list)
+    for op in job_operations:
+        job_routes[op[2]].append((op[1], op[0]))
+
+    # Step 2: Check resource (machine) conflicts
+    resource_intervals = defaultdict(list)
+    for (job, resource), (start, duration) in solution.items():
+        if duration == 0:
+            continue
+        resource_intervals[resource].append((start, start + duration, job))
+
+    for resource, intervals in resource_intervals.items():
+        intervals.sort()
+        for i in range(len(intervals) - 1):
+            end1 = intervals[i][1]
+            start2 = intervals[i+1][0]
+            if end1 > start2:
+                print(f"Conflict on resource {resource} between jobs {intervals[i][2]} and {intervals[i+1][2]}")
+                return False
+
+    # Step 3: Check job precedence
+    for job, task_sequence in job_routes.items():
+        for i in range(len(task_sequence) - 1):
+            r1, _ = task_sequence[i]
+            r2, _ = task_sequence[i + 1]
+            if (job, r1) not in solution or (job, r2) not in solution:
+                print(f"Missing schedule for job {job} on resource {r1} or {r2}")
+                return False
+            start1, dur1 = solution[(job, r1)]
+            start2, _ = solution[(job, r2)]
+            if start1 + dur1 > start2:
+                print(f"Job {job} precedence violated: task on {r1} ends at {start1 + dur1}, but task on {r2} starts at {start2}")
+                return False
+
+    return True

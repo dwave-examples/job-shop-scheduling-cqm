@@ -81,6 +81,20 @@ class JobShopData:
         """
         return [task for job_tasks in self._job_tasks.values() for task in job_tasks]
 
+    def get_ordered_tasks(self) -> tuple[Iterable[tuple]]:
+        ordered_tasks= []
+        zero_duration_task = []
+        for j, val in self.job_tasks.items():
+            for v in val:
+                if v.duration > 0:
+                    assert v.job == j
+                    ordered_tasks.append((v.duration, v.resource, v.job))
+                else:
+                    zero_duration_task.append((v.duration, v.resource, v.job))
+
+        return ordered_tasks, zero_duration_task
+
+
     def get_last_tasks(self) -> Iterable[Task]:
         """Returns the last task in each job.
 
@@ -318,7 +332,7 @@ class JobShopData:
                         resource_name = resource_mapping[resource]
                 else:
                     resource_name = resource
-                self.add_task(Task(str(job), duration=duration, resource=resource_name))
+                self.add_task(Task(job, duration=duration, resource=resource_name))
 
     def load_from_file(self, filename: str, resource_names: list = None) -> None:
         """Loads data from a file.

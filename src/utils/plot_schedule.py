@@ -24,7 +24,7 @@ def plot_solution(job_data, solution: dict, location: str = None) -> tuple:
     job_start_time = defaultdict(list)
     processing_time = defaultdict(list)
     for j in job_data.jobs:
-        job_start_time[j] = [solution[(j, i)][1] for i in job_data.resources]
+        job_start_time[j] = [solution[(j, i)][0] for i in job_data.resources]
         processing_time[j] = [
             job_data.get_resource_job_tasks(i, j).duration for i in job_data.resources
         ]
