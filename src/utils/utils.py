@@ -116,9 +116,15 @@ def write_solution_to_file(
         header.extend(["task", "start", "dur"])
 
     job_sol = {}
+
+    ordered_tasks = model_data.get_ordered_tasks()
+    job_resources = {j:[] for j in model_data.jobs}
+    for d, m, j in ordered_tasks:
+            job_resources[j].append(m)
+
     for j in model_data.jobs:
         job_sol[j] = [j]
-        for i in model_data.resources:
+        for i in job_resources[j]:
             job_sol[j].extend(list(solution[j, i]))
 
     with open(solution_file_path, "w") as f:

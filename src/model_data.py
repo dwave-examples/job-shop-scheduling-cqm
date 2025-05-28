@@ -73,6 +73,15 @@ class JobShopData:
         """
         return self._job_tasks
 
+    @property
+    def job_resources(self) -> dict:
+        ordered_tasks = self.get_ordered_tasks()
+        job_resources = {j:[] for j in self.jobs}
+        for d, m, j in ordered_tasks:
+                job_resources[j].append(m)
+        return job_resources
+
+
     def get_tasks(self) -> Iterable[Task]:
         """Returns the tasks in the data.
 
@@ -83,16 +92,12 @@ class JobShopData:
 
     def get_ordered_tasks(self) -> tuple[Iterable[tuple]]:
         ordered_tasks= []
-        zero_duration_task = []
         for j, val in self.job_tasks.items():
             for v in val:
-                if v.duration > 0:
                     assert v.job == j
                     ordered_tasks.append((v.duration, v.resource, v.job))
-                else:
-                    zero_duration_task.append((v.duration, v.resource, v.job))
 
-        return ordered_tasks, zero_duration_task
+        return ordered_tasks
 
 
     def get_last_tasks(self) -> Iterable[Task]:

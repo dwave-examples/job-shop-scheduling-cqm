@@ -47,6 +47,10 @@ class JobShopSchedulingCQM:
         self.max_makespan = max_makespan
         self.solver_name = solver_name
         self.verbose = verbose   
+        self.ordered_tasks = data.get_ordered_tasks()
+        self.job_resources = {j:[] for j in data.jobs}
+        for _, machine,  job in self.ordered_tasks:
+             self.job_resources[job].append(machine)
 
     def make(self):
         """
@@ -115,7 +119,7 @@ class JobShopSchedulingCQM:
         # Define integer variable for start time of using machine i for job j
         self.x = {}
         for job in data.jobs:
-            for resource in data.resources:
+            for resource in self.job_resources[job]:
                 task = data.get_resource_job_tasks(job=job, resource=resource)
                 lb, ub = data.get_task_time_bounds(task, self.max_makespan)
                 self.x[(job, resource)] = Integer(
@@ -175,6 +179,8 @@ class JobShopSchedulingCQM:
             for k in data.jobs:
                 if j < k:
                     for i in data.resources:
+                        if not (i in self.job_resources[k] and i in self.job_resources[j]):
+                            continue
                         task_k = data.get_resource_job_tasks(job=k, resource=i)
                         task_j = data.get_resource_job_tasks(job=j, resource=i)
 
@@ -306,8 +312,7 @@ class JobShopSchedulingCQM:
                     self.best_sample[self.x[(j, i)].variables[0]],
                     self.data.get_resource_job_tasks(job=j, resource=i).duration,
                 )
-                for i in self.data.resources
-                for j in self.data.jobs
+                for j in self.data.jobs for i in self.job_resources[j]
             }
             
         elif self.solver_name == "MIP":

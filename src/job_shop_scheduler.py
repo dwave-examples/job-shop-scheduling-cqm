@@ -91,8 +91,11 @@ def run_shop_scheduler(
         Resource.
 
     """
+    ordered_tasks = job_data.get_ordered_tasks()
+
     if max_makespan is None:
-        max_makespan = generate_greedy_makespan(job_data) * greedy_multiplier
+        best_greedy_span = generate_greedy_makespan(job_data)
+        max_makespan = int(best_greedy_span * greedy_multiplier)
 
     if solver_name == "NL":
         model = JobShopSchedulingNL(data=job_data, max_makespan=max_makespan, verbose=verbose)
@@ -108,11 +111,9 @@ def run_shop_scheduler(
     solver_start_time = time()
     model.solve(time_limit=solver_time_limit, profile=profile)
     solver_time = time() - solver_start_time
-    model.compute_results()
-    
-    non_zero_duraiton_ordered_tasks = job_data.get_ordered_tasks()[0]
-    if not is_valid_schedule(model.solution, non_zero_duraiton_ordered_tasks):
-        # raise ValueError("Solution is not valid")
+    model.compute_results() 
+
+    if not is_valid_schedule(model.solution, ordered_tasks):
         print("Solution is not valid")
     
     if verbose:
@@ -123,13 +124,15 @@ def run_shop_scheduler(
                     [
                         "Completion Time",
                         "Max Make-Span",
+                        "best_greedy_span",
                         "Model Building Time (s)",
                         "Solver Call Time (s)",
                         "Total Runtime (s)",
                     ],
                     [
                         model.completion_time,
-                        model.max_makespan,
+                        max_makespan,
+                        best_greedy_span,
                         int(model_building_time),
                         int(solver_time),
                         int(solver_time + model_building_time),

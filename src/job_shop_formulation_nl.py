@@ -28,15 +28,14 @@ class JobShopSchedulingNL:
         self.jobs = list(self.job_dicts.values())
 
         self.max_makespan = max_makespan
-        ordered_tasks, zero_duration_task = data.get_ordered_tasks()
+        ordered_tasks = data.get_ordered_tasks()
         self.ordered_tasks = [(d, self.machine_dict[m], self.job_dicts[j]) for (d, m , j) in ordered_tasks]
-        self.zero_duration_task = [(d, self.machine_dict[m], self.job_dicts[j]) for (d, m , j) in zero_duration_task]
         
         self.n_tasks =  len(self.ordered_tasks)
         self.task_durations = list([v[0] for v in self.ordered_tasks])
         self.task_machines = list([v[1] for v in self.ordered_tasks])
         self.task_jobs = list([v[2] for v in self.ordered_tasks])
-        
+
         # Mapping between jobs and tasks. 
         self.job_tasks = {j:[] for j in self.jobs}
         for i, j in enumerate(self.task_jobs):
@@ -45,7 +44,7 @@ class JobShopSchedulingNL:
         self.verbose = verbose
         self.solution = {}
         self.completion_time = 0
-    
+
     def define_variables(self) -> None:
         """
         This function initializes the problem variables
@@ -77,21 +76,15 @@ class JobShopSchedulingNL:
             self.nl_model: adds precedence constraints to the nl model
         """
 
-
-        constant_numbers = self.nl_model.constant(np.arange(self.n_tasks + 1))
-        one = constant_numbers[1]
-        positions = constant_numbers[1: self.n_tasks + 1]
-
+        constant_numbers = self.nl_model.constant(np.arange(self.n_tasks ))
         for job_j in self.jobs:
             job_tasks = self.job_tasks[job_j]
             for task_t in range(1, len(job_tasks)):
                 succ = job_tasks[task_t]
-                pred = job_tasks[task_t - 1]
-                successor_task_id = constant_numbers[succ]
-                predecessor_task_id = constant_numbers[pred]
-                successors_index =  ((self.task_order == successor_task_id) * positions).sum()
-                predecessors_index =  ((self.task_order == predecessor_task_id) * positions).sum()
-                self.nl_model.add_constraint(successors_index >= predecessors_index + one)
+                pred = job_tasks[task_t -1 ]
+                successor_task_id = constant_numbers[succ: succ + 1]
+                predecessor_task_id = constant_numbers[pred:pred + 1]
+                self.nl_model.add_constraint(self.start_times[successor_task_id] >= self.finish_times[predecessor_task_id])
 
         if self.verbose:
             print(f"Added precedence constraint, total number of nodes {self.nl_model.num_nodes()}")
@@ -155,18 +148,22 @@ class JobShopSchedulingNL:
         Modifies:
             self.nl_model: prepares NL model for solving
         """
-        #define constraints
+
         self.define_variables()
-        self.add_precedence_constraints()
-        #build start and finish times
+
+        # Build start and finish times
         self.build_schedule()
-        #set the objectives
+
+        # Define recedence constraints
+        self.add_precedence_constraints()
+
+        # Set the objectives
         self.define_objectives()
+
         self.nl_model.lock()
-        
+
         if self.verbose:
             print(f"Finished building NL model, total number of nodes {self.nl_model.num_nodes()}")
-    
 
     def define_objectives(self) -> None:
             """this function sets the objective of the NL model
@@ -218,11 +215,6 @@ class JobShopSchedulingNL:
                 duration = self.task_durations[task_t]
                 self.solution[(job_dicts_rev[job], machine_dict_rev[machine])] = (start, duration)
 
-            # Now add the task with zero duratins to the end of schedule. 
-            for (duration, machine, job) in self.zero_duration_task:
-                self.solution[(job_dicts_rev[job], machine_dict_rev[machine])] = (makespan, duration)
-
             self.completion_time = makespan
-
         else:            
             warnings.warn("Warning: NL did not find feasible solution")
