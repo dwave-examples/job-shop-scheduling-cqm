@@ -23,11 +23,11 @@ def plot_solution(job_data, solution: dict, location: str = None) -> tuple:
     """
     job_start_time = defaultdict(list)
     processing_time = defaultdict(list)
+    job_resources = job_data.job_resources
     for j in job_data.jobs:
-        job_start_time[j] = [solution[(j, i)][1] for i in job_data.resources]
+        job_start_time[j] = [solution[(j, i)][0] if i in job_resources[j] else np.nan for i in job_data.resources]
         processing_time[j] = [
-            job_data.get_resource_job_tasks(i, j).duration for i in job_data.resources
-        ]
+            job_data.get_resource_job_tasks(i, j).duration if i in job_resources[j] else np.nan for i in job_data.resources]
     if location is not None:
         plot_schedule_core(job_start_time, processing_time, location)
     return job_start_time, processing_time
