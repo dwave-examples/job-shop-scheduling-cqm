@@ -76,15 +76,17 @@ class JobShopSchedulingNL:
             self.nl_model: adds precedence constraints to the nl model
         """
 
-        constant_numbers = self.nl_model.constant(np.arange(self.n_tasks ))
+        succ = []
+        pred = []
         for job_j in self.jobs:
             job_tasks = self.job_tasks[job_j]
             for task_t in range(1, len(job_tasks)):
-                succ = job_tasks[task_t]
-                pred = job_tasks[task_t -1 ]
-                successor_task_id = constant_numbers[succ: succ + 1]
-                predecessor_task_id = constant_numbers[pred:pred + 1]
-                self.nl_model.add_constraint(self.start_times[successor_task_id] >= self.finish_times[predecessor_task_id])
+                succ.append(job_tasks[task_t])
+                pred.append(job_tasks[task_t - 1])
+
+        successor_task_ids = self.nl_model.constant(succ)
+        predecessor_task_ids = self.nl_model.constant(pred)
+        self.nl_model.add_constraint((self.start_times[successor_task_ids] >= self.finish_times[predecessor_task_ids]).all())
 
         if self.verbose:
             print(f"Added precedence constraint, total number of nodes {self.nl_model.num_nodes()}")
